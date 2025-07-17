@@ -26,7 +26,7 @@ const Footer = () => {
           <ul className="space-y-2">
             <li>
               <a
-                href="#"
+                href="/"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 Home
@@ -34,7 +34,7 @@ const Footer = () => {
             </li>
             <li>
               <a
-                href="#"
+                href="/about"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 About
@@ -42,7 +42,7 @@ const Footer = () => {
             </li>
             <li>
               <a
-                href="#"
+                href="/products"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 Products
@@ -50,7 +50,7 @@ const Footer = () => {
             </li>
             <li>
               <a
-                href="#"
+                href="/contact"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 Contact
@@ -66,7 +66,7 @@ const Footer = () => {
           <ul className="space-y-2">
             <li>
               <a
-                href="#"
+                href="/contact#contact-bottom"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 Shipping Info
@@ -74,7 +74,7 @@ const Footer = () => {
             </li>
             <li>
               <a
-                href="#"
+                href="/contact#contact-bottom"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 Returns
@@ -82,7 +82,7 @@ const Footer = () => {
             </li>
             <li>
               <a
-                href="#"
+                href="/contact#contact-bottom"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 FAQ
@@ -90,7 +90,7 @@ const Footer = () => {
             </li>
             <li>
               <a
-                href="#"
+                href="/contact#contact-bottom"
                 className="text-[#331d15] dark:text-white hover:text-[#8B4513] transition-colors"
               >
                 Support
@@ -123,13 +123,15 @@ const Footer = () => {
 
           <div className="flex gap-3 mb-6">
             <a
-              href="#"
+              href="https://www.facebook.com/profile.php?id=100091268719455"
+              target="_blank"
               className="p-2 bg-[#331d15] text-white rounded-full hover:bg-[#1877F2] transition-colors"
             >
               <FaFacebookF className="w-4 h-4" />
             </a>
             <a
-              href="#"
+              href="https://www.lazada.com.ph/shop/kape-kalakal/"
+              target="_blank"
               className="p-2 bg-[#331d15] text-white rounded-full hover:bg-[#FF6600] transition-colors"
             >
               <FaShopify className="w-4 h-4" />

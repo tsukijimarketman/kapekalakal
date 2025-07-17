@@ -25,7 +25,10 @@ const Section4_Contact = () => {
   ];
 
   return (
-    <div className="w-full bg-[#785434] dark:bg-[#331d15] py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      id="contact-bottom"
+      className="w-full bg-[#785434] dark:bg-[#331d15] py-12 px-4 sm:px-6 lg:px-8"
+    >
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-[#f5f1df] mb-4">
