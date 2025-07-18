@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { IoLocation } from "react-icons/io5";
+import emailjs from "emailjs-com";
+import { toast } from "react-toastify";
 
 const Section3_Contact = () => {
+  // Step 1: Define the state to hold the form data
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -10,6 +13,7 @@ const Section3_Contact = () => {
     message: "",
   });
 
+  // Step 2: Handle input changes to update the state
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -18,8 +22,45 @@ const Section3_Contact = () => {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log("Form submitted:", formData);
+  // Step 3: Handle form submission
+  const handleSubmit = (e) => {
+    e.preventDefault(); // Prevent the page from reloading
+
+    // Ensure the form is valid before sending
+    if (e.target.checkValidity()) {
+      // Step 4: Send email via EmailJS service and template
+      emailjs
+        .send(
+          "service_dgczydo",
+          "template_b3ma8q4",
+          {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            subject: formData.subject,
+            message: formData.message,
+          },
+          "fPS6-zJjwDTed_6zI"
+        )
+        .then(
+          (result) => {
+            console.log("Concern sent successfully", result.text);
+            toast.success("Concern sent successfully");
+            setFormData({
+              firstName: "",
+              lastName: "",
+              email: "",
+              subject: "",
+              message: "",
+            });
+          },
+          (error) => {
+            console.error("Error sending email: ", error.text);
+          }
+        );
+    } else {
+      toast.error("Please fill out all required fields correctly.");
+    }
   };
 
   return (
@@ -31,19 +72,20 @@ const Section3_Contact = () => {
               Send us a Message
             </h2>
 
-            <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-[#efe8d2] mb-2">
                     First Name
                   </label>
                   <input
+                    required
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
                     placeholder="John"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-[#331d15] focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
                   />
                 </div>
                 <div>
@@ -51,12 +93,13 @@ const Section3_Contact = () => {
                     Last Name
                   </label>
                   <input
+                    required
                     type="text"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
                     placeholder="Doe"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-[#331d15] focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
                   />
                 </div>
               </div>
@@ -66,12 +109,13 @@ const Section3_Contact = () => {
                   Email
                 </label>
                 <input
+                  required
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="john@example.com"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-[#331d15] focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
                 />
               </div>
 
@@ -80,12 +124,13 @@ const Section3_Contact = () => {
                   Subject
                 </label>
                 <input
+                  required
                   type="text"
                   name="subject"
                   value={formData.subject}
                   onChange={handleInputChange}
                   placeholder="How can we help you?"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-[#331d15] focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275]"
                 />
               </div>
 
@@ -94,23 +139,23 @@ const Section3_Contact = () => {
                   Message
                 </label>
                 <textarea
+                  required
                   name="message"
                   value={formData.message}
                   onChange={handleInputChange}
                   rows={5}
                   placeholder="Tell us more about your inquiry..."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275] resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#7a4e2e] rounded-lg focus:ring-2 focus:ring-[#331d15] focus:border-transparent outline-none bg-white dark:bg-[#67412c] text-gray-900 dark:text-[#f8f5ee] placeholder-gray-500 dark:placeholder-[#cfb275] resize-none"
                 />
               </div>
 
               <button
-                type="button"
-                onClick={handleSubmit}
-                className="w-full bg-[#956939] dark:bg-[#986836] text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                type="submit" // Changed from 'button' to 'submit'
+                className="cursor-pointer w-full bg-[#956939] dark:bg-[#986836] text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Send Message
               </button>
-            </div>
+            </form>
           </div>
         </div>
 
@@ -173,7 +218,7 @@ const Section3_Contact = () => {
               </ul>
             </div>
 
-            <button className="hover-lift w-full sm:w-auto bg-white dark:bg-[#67412c] border-2 border-[#956939] dark:border-[#986836] text-[#956939] dark:text-[#f8f5ee] font-semibold py-3 px-8 rounded-lg transition-colors duration-300">
+            <button className="cursor-pointer hover-lift w-full sm:w-auto bg-white dark:bg-[#67412c] border-2 border-[#956939] dark:border-[#986836] text-[#956939] dark:text-[#f8f5ee] font-semibold py-3 px-8 rounded-lg transition-colors duration-300">
               Schedule a Tour
             </button>
           </div>

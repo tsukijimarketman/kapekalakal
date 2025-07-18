@@ -16,7 +16,7 @@ const Section3_About = () => {
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 w-full max-w-7xl mx-auto">
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#c0964f] rounded-full flex items-center justify-center mb-4">
             <FaRegHeart className="text-white text-2xl" />
           </div>
@@ -28,7 +28,7 @@ const Section3_About = () => {
             exceptional taste in every cup
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#c0964f] rounded-full flex items-center justify-center mb-4">
             <MdGroups className="text-white text-2xl" />
           </div>
@@ -40,7 +40,7 @@ const Section3_About = () => {
             positive impact through coffee.
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#c0964f] rounded-full flex items-center justify-center mb-4">
             <CiGlobe className="text-white text-2xl" />
           </div>
@@ -52,7 +52,7 @@ const Section3_About = () => {
             protecting the planet for future generations.
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#c0964f] rounded-full flex items-center justify-center mb-4">
             <FiCoffee className="text-white text-2xl" />
           </div>

@@ -14,7 +14,7 @@ const Section4_About = () => {
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-6 md:gap-8 lg:gap-10 w-full max-w-4xl mx-auto justify-center">
-        <div className="bg-[#dbc996] dark:bg-[#59382a] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 hover:scale-105 flex flex-col items-center justify-center p-6 sm:p-8 flex-1">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift  transition-transform duration-300 hover:scale-105 flex flex-col items-center justify-center p-6 sm:p-8 flex-1">
           <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden mb-4 border-4 border-[#986836] dark:border-[#c0964f]">
             <img
               src={pfp1}
@@ -32,7 +32,7 @@ const Section4_About = () => {
             15+ Years of experience in Coffee Baiting
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 hover:scale-105 flex flex-col items-center justify-center p-6 sm:p-8 flex-1">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] border border-[#986836] dark:border-[#c0964f] rounded-2xl hover-lift  transition-transform duration-300 hover:scale-105 flex flex-col items-center justify-center p-6 sm:p-8 flex-1">
           <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden mb-4 border-4 border-[#986836] dark:border-[#c0964f]">
             <img
               src={pfp2}

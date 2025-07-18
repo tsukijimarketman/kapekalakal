@@ -7,7 +7,7 @@ const Section2_Contact = () => {
   return (
     <section className="w-full bg-[#f5f1df] dark:bg-[#331d15] flex flex-col justify-between p-4 sm:p-6 md:p-8 lg:p-10 gap-6 md:gap-8 lg:gap-10">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 w-full max-w-7xl mx-auto">
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#67412c] rounded-full flex items-center justify-center mb-4">
             <IoLocationOutline className="text-white text-2xl" />
           </div>
@@ -18,7 +18,7 @@ const Section2_Contact = () => {
             Visit Our Roastery, we are open for tours and tastings
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#67412c] rounded-full flex items-center justify-center mb-4">
             <IoCallOutline className="text-white text-2xl" />
           </div>
@@ -29,7 +29,7 @@ const Section2_Contact = () => {
             Call Us Monday - Friday, 8AM - 6PM
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#67412c] rounded-full flex items-center justify-center mb-4">
             <CiMail className="text-white text-2xl" />
           </div>
@@ -40,7 +40,7 @@ const Section2_Contact = () => {
             We respond within 24 hours
           </p>
         </div>
-        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#555555] rounded-2xl hover-lift cursor-pointer transition-transform duration-300 flex flex-col items-center justify-center p-6">
+        <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#555555] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">
           <div className="w-16 h-16 bg-[#986836] dark:bg-[#67412c] rounded-full flex items-center justify-center mb-4">
             <MdAccessTime className="text-white text-2xl" />
           </div>
