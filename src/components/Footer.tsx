@@ -3,6 +3,7 @@ import { FaFacebookF, FaShopify } from "react-icons/fa";
 import { IoIosSend } from "react-icons/io";
 import Dialog from "./Dialog";
 import emailjs from "emailjs-com";
+import { toast } from "react-toastify";
 
 const Footer = () => {
   const [showDialog, setShowDialog] = useState(false);
@@ -46,7 +47,7 @@ const Footer = () => {
       );
 
       if (response.status === 200) {
-        alert("Thank you for subscribing!");
+        toast.success("Subscribed to email updates");
         setEmail("");
       } else {
         alert(`Error: ${response.text}`);
@@ -178,7 +179,7 @@ const Footer = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-[#331d15] text-[#f9f6ed] rounded-r-md hover:bg-[#b28341] transition-colors focus:outline-none focus:ring-2 focus:ring-[#b28341] focus:ring-offset-2"
+                className="cursor-pointer px-4 py-2 bg-[#331d15] text-[#f9f6ed] rounded-r-md hover:bg-[#b28341] transition-colors focus:outline-none focus:ring-2 focus:ring-[#b28341] focus:ring-offset-2"
               >
                 <IoIosSend className="w-5 h-5" />
               </button>

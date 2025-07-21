@@ -104,12 +104,16 @@ const Navbar = () => {
             <FiSun className="text-xl text-black" />
           )}
         </button>
-        <button className="bg-transparent hover:bg-[#debe7ee4] text-sm text-black dark:text-white px-4.5 py-2.5 rounded transition-colors duration-300 ease-in-out cursor-pointer">
-          Sign In
-        </button>
-        <button className="bg-[#986836] dark:bg-[#cfb175] hover-lift hover:bg-[#b08342]  text-sm text-white dark:text-black px-4.5 py-2.5 rounded transition-colors duration-300 ease-in-out cursor-pointer">
-          Sign Up
-        </button>
+        <Link to="/signin">
+          <button className="bg-transparent hover:bg-[#debe7ee4] text-sm text-black dark:text-white px-4.5 py-2.5 rounded transition-colors duration-300 ease-in-out cursor-pointer">
+            Sign In
+          </button>
+        </Link>
+        <Link to="/signup">
+          <button className="bg-[#986836] dark:bg-[#cfb175] hover-lift hover:bg-[#b08342]  text-sm text-white dark:text-black px-4.5 py-2.5 rounded transition-colors duration-300 ease-in-out cursor-pointer">
+            Sign Up
+          </button>
+        </Link>
         <button className="bg-transparent hover:bg-[#debe7ee4] text-black dark:text-white px-3 py-3 rounded transition-colors duration-300 ease-in-out cursor-pointer">
           <LuShoppingCart />
         </button>
