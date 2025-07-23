@@ -1,5 +1,7 @@
 import React from "react";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Home from "./components/Home/Home";
 import About from "./components/About/About";
@@ -7,37 +9,79 @@ import Contact from "./components/Contact/Contact";
 import Products from "./components/Products";
 import Signup from "./services/auth/Signup";
 import Signin from "./services/auth/Signin";
+import User from "./pages/user/User";
+// import Admin from "./pages/admin/Admin";
+// import Delivery from "./pages/delivery/Delivery";
+
+// Root component that provides AuthContext within Router
+const RootLayout = () => {
+  return (
+    <AuthProvider>
+      <Outlet />
+    </AuthProvider>
+  );
+};
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout />,
+    element: <RootLayout />,
     children: [
       {
         path: "/",
-        element: <Home />,
+        element: <Layout />,
+        children: [
+          {
+            path: "/",
+            element: <Home />,
+          },
+          {
+            path: "/about",
+            element: <About />,
+          },
+          {
+            path: "/products",
+            element: <Products />,
+          },
+          {
+            path: "/contact",
+            element: <Contact />,
+          },
+        ],
       },
       {
-        path: "/about",
-        element: <About />,
+        path: "/signup",
+        element: <Signup />,
       },
       {
-        path: "/products",
-        element: <Products />,
+        path: "/signin",
+        element: <Signin />,
       },
       {
-        path: "/contact",
-        element: <Contact />,
+        path: "/user",
+        element: (
+          <ProtectedRoute allowedRoles={["user"]}>
+            <User />
+          </ProtectedRoute>
+        ),
       },
+      // {
+      //   path: "/admin",
+      //   element: (
+      //     <ProtectedRoute allowedRoles={['admin']}>
+      //       <Admin />
+      //     </ProtectedRoute>
+      //   ),
+      // },
+      // {
+      //   path: "/delivery",
+      //   element: (
+      //     <ProtectedRoute allowedRoles={['delivery']}>
+      //       <Delivery />
+      //     </ProtectedRoute>
+      //   ),
+      // },
     ],
-  },
-  {
-    path: "/signup",
-    element: <Signup />,
-  },
-  {
-    path: "/signin",
-    element: <Signin />,
   },
 ]);
 

@@ -1,25 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { IoIosArrowBack } from "react-icons/io";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 import bgVideo from "../../assets/video/auth_bg.mp4";
 
 const Signin = () => {
+  const navigate = useNavigate();
+  const { signin, user, loading } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
-
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateEmail = (email) => {
+  // Redirect if user is already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      const redirectMap = {
+        admin: "/admin",
+        delivery: "/delivery",
+        user: "/user",
+      };
+      navigate(redirectMap[user.role], { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
     // Clear all errors
     setEmailError("");
     setPasswordError("");
@@ -41,12 +60,37 @@ const Signin = () => {
       hasErrors = true;
     }
 
-    // If no errors, proceed with signin
-    if (!hasErrors) {
-      alert("Sign in successful!");
-      console.log("Form data:", { email, password });
+    // If there are errors, don't proceed
+    if (hasErrors) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await signin(email, password);
+
+      if (!result.success) {
+        if (result.error === "Invalid email or password") {
+          setPasswordError("Invalid email or password");
+        } else {
+          setPasswordError(result.error || "Something went wrong. Try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Sign in error:", error);
+      setPasswordError("Server error. Try again later.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#331d15]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[100vh] w-[100vw] flex relative overflow-hidden">
@@ -89,7 +133,7 @@ const Signin = () => {
             </p>
           </div>
 
-          <div className="px-8 py-6 space-y-4">
+          <form onSubmit={handleSubmit} className="px-8 py-6 space-y-4">
             <div>
               <label className="block text-xs font-medium text-[#331d15] mb-1">
                 Email Address *
@@ -105,6 +149,8 @@ const Signin = () => {
                   emailError ? "border-red-500" : "border-[#c1974e]"
                 }`}
                 placeholder="Enter your email address"
+                autoComplete="email"
+                disabled={isSubmitting}
               />
               {emailError && (
                 <p className="mt-1 text-xs text-red-600">{emailError}</p>
@@ -127,11 +173,14 @@ const Signin = () => {
                     passwordError ? "border-red-500" : "border-[#c1974e]"
                   }`}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-[#67412c] hover:text-[#331d15] transition-colors"
+                  className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-[#67412c] hover:text-[#331d15] transition-colors disabled:opacity-50"
+                  disabled={isSubmitting}
                 >
                   {showPassword ? (
                     <AiOutlineEyeInvisible size={20} />
@@ -146,13 +195,20 @@ const Signin = () => {
             </div>
 
             <button
-              type="button"
-              onClick={handleSubmit}
-              className="cursor-pointer w-full bg-[#331d15] hover:bg-[#67412c] text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-300 transform hover:scale-[1.02]"
+              type="submit"
+              disabled={isSubmitting}
+              className="cursor-pointer w-full bg-[#331d15] hover:bg-[#67412c] text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
             >
-              Sign In
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </button>
-          </div>
+          </form>
 
           <div className="px-8 py-4 bg-[#e1d0a7] text-center">
             <p className="text-xs text-[#331d15]">
