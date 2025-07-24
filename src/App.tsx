@@ -10,6 +10,7 @@ import Products from "./components/Products";
 import Signup from "./services/auth/Signup";
 import Signin from "./services/auth/Signin";
 import User from "./pages/user/User";
+import AuthGate from "./components/AuthGate";
 // import Admin from "./pages/admin/Admin";
 // import Delivery from "./pages/delivery/Delivery";
 
@@ -28,25 +29,17 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       {
-        path: "/",
-        element: <Layout />,
+        // Wrap public routes with AuthGate
+        element: (
+          <AuthGate>
+            <Layout />
+          </AuthGate>
+        ),
         children: [
-          {
-            path: "/",
-            element: <Home />,
-          },
-          {
-            path: "/about",
-            element: <About />,
-          },
-          {
-            path: "/products",
-            element: <Products />,
-          },
-          {
-            path: "/contact",
-            element: <Contact />,
-          },
+          { path: "/", element: <Home /> },
+          { path: "/about", element: <About /> },
+          { path: "/products", element: <Products /> },
+          { path: "/contact", element: <Contact /> },
         ],
       },
       {
