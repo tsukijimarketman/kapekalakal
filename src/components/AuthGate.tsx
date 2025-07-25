@@ -3,11 +3,11 @@ import { useAuth } from "../contexts/AuthContext";
 import { Navigate, useLocation } from "react-router-dom";
 import Lottie from "./Lottie"; // Your loading animation
 
-const redirectMap = {
-  admin: "/admin",
-  delivery: "/delivery",
-  user: "/user",
-};
+// const redirectMap = {
+//   admin: "/admin",
+//   delivery: "/delivery",
+//   user: "/user",
+// };
 
 const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -23,13 +23,20 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   // If user is authenticated and on a public route, redirect to dashboard
+  // if (
+  //   user &&
+  //   (location.pathname === "/" ||
+  //     location.pathname === "/signin" ||
+  //     location.pathname === "/signup")
+  // ) {
+  //   return <Navigate to={redirectMap[user.role]} replace />;
+  // }
+
   if (
     user &&
-    (location.pathname === "/" ||
-      location.pathname === "/signin" ||
-      location.pathname === "/signup")
+    (location.pathname === "/signin" || location.pathname === "/signup")
   ) {
-    return <Navigate to={redirectMap[user.role]} replace />;
+    return <Navigate to="/user" replace />;
   }
 
   // Otherwise, render children (public routes)

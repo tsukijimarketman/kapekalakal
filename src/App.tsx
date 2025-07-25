@@ -9,8 +9,9 @@ import Contact from "./components/Contact/Contact";
 import Products from "./components/Products";
 import Signup from "./services/auth/Signup";
 import Signin from "./services/auth/Signin";
-import User from "./pages/user/User";
 import AuthGate from "./components/AuthGate";
+import UserLayout from "./pages/user/UserLayout";
+
 // import Admin from "./pages/admin/Admin";
 // import Delivery from "./pages/delivery/Delivery";
 
@@ -54,7 +55,9 @@ const router = createBrowserRouter([
         path: "/user",
         element: (
           <ProtectedRoute allowedRoles={["user"]}>
-            <User />
+            <UserLayout>
+              <Home />
+            </UserLayout>
           </ProtectedRoute>
         ),
       },

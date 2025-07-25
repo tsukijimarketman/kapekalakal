@@ -99,9 +99,9 @@ const Navbar = () => {
           className="bg-transparent hover:bg-[#debe7ee4] text-black px-3 py-3 rounded transition-colors duration-300 ease-in-out cursor-pointer"
         >
           {darkMode ? (
-            <LuMoon className="text-xl text-white" />
+            <LuMoon className="text-white" />
           ) : (
-            <FiSun className="text-xl text-black" />
+            <FiSun className="text-black" />
           )}
         </button>
         <Link to="/signin">

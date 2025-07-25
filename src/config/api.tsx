@@ -9,6 +9,10 @@ export const API_ENDPOINTS = {
     VERIFY: `${API_BASE_URL}/api/auth/verify`,
     SIGNOUT: `${API_BASE_URL}/api/auth/signout`,
   },
+  USER: {
+    PROFILE: `${API_BASE_URL}/api/user/profile`,
+    PROFILE_IMAGE: `${API_BASE_URL}/api/user/profile-image`,
+  },
 };
 
 // Default fetch options with credentials

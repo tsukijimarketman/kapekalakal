@@ -15,6 +15,19 @@ html {
   }
 }
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}
+
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+  display: none !important;
+}
+
 @font-face {
   font-family: "Playfair Display";
   src: url("./assets/fonts/PlayfairDisplay-Regular.ttf") format("truetype");
