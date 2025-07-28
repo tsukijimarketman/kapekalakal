@@ -3,6 +3,7 @@ import { CgProfile } from "react-icons/cg";
 import { FiEdit3, FiSave, FiEye, FiEyeOff } from "react-icons/fi";
 import Lottie from "./Lottie";
 import { API_ENDPOINTS, fetchWithCredentials } from "../config/api";
+import { toast } from "react-toastify";
 
 const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
@@ -33,19 +34,19 @@ const ProfilePage = () => {
     confirmPassword: "",
   });
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
+      toast.error("Please select an image file");
       return;
     }
 
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
+      toast.error("File size must be less than 5MB");
       return;
     }
 
@@ -77,19 +78,19 @@ const ProfilePage = () => {
             contactNumber: data.user.contactNumber || "",
           }));
         }
-        alert("Profile image updated successfully!");
+        toast.success("Profile image updated successfully!");
       } else {
-        alert(data.error || "Failed to upload image");
+        toast.error(data.error || "Failed to upload image");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload image. Please try again.");
+      toast.error("Failed to upload image. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: string, value: string) => {
     if (field === "age") {
       // Only allow numbers
       if (!/^\d*$/.test(value)) return;
@@ -101,95 +102,173 @@ const ProfilePage = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePasswordChange = (field, value) => {
+  const handlePasswordChange = (field: string, value: string) => {
     setPasswordData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const togglePasswordVisibility = (field) => {
+  const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleSave = async () => {
-    // Validation
-    if (
-      formData.age &&
-      (parseInt(formData.age) < 1 || parseInt(formData.age) > 120)
-    ) {
-      alert("Please enter a valid age");
-      return;
+  // Password validation function
+  const validatePassword = (
+    password: string
+  ): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (password.length < 8) {
+      errors.push("Password must be at least 8 characters long");
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push("Password must contain at least 1 uppercase letter");
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push("Password must contain at least 1 lowercase letter");
+    }
+    if (!/\d/.test(password)) {
+      errors.push("Password must contain at least 1 number");
+    }
+    if (!/[@$!%*?&]/.test(password)) {
+      errors.push(
+        "Password must contain at least 1 special character (@$!%*?&)"
+      );
     }
 
+    return { isValid: errors.length === 0, errors };
+  };
+
+  // Password strength indicator
+  const getPasswordStrength = (password: string) => {
+    if (!password) return { strength: 0, color: "gray", text: "" };
+
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/\d/.test(password)) strength++;
+    if (/[@$!%*?&]/.test(password)) strength++;
+
+    const strengthMap = {
+      0: { color: "gray", text: "Very Weak" },
+      1: { color: "red", text: "Weak" },
+      2: { color: "orange", text: "Fair" },
+      3: { color: "yellow", text: "Good" },
+      4: { color: "lightgreen", text: "Strong" },
+      5: { color: "green", text: "Very Strong" },
+    };
+
+    return { strength, ...strengthMap[strength as keyof typeof strengthMap] };
+  };
+
+  const handleSave = async () => {
+    // Validation for profile fields
+    if (isEditing) {
+      if (
+        formData.age &&
+        (parseInt(formData.age) < 1 || parseInt(formData.age) > 120)
+      ) {
+        toast.error("Please enter a valid age");
+        return;
+      }
+    }
+
+    // Validation for password fields
     if (isChangingPassword) {
       if (
         !passwordData.oldPassword ||
         !passwordData.newPassword ||
         !passwordData.confirmPassword
       ) {
-        alert("Please fill all password fields");
+        toast.error("Please fill all password fields");
         return;
       }
+
       if (passwordData.newPassword !== passwordData.confirmPassword) {
-        alert("New passwords do not match");
+        toast.error("New password and confirm password do not match");
         return;
       }
-      if (passwordData.newPassword.length < 6) {
-        alert("Password must be at least 6 characters long");
+
+      const passwordValidation = validatePassword(passwordData.newPassword);
+      if (!passwordValidation.isValid) {
+        toast.error(passwordValidation.errors[0]);
         return;
       }
     }
-
-    // Here you would typically send data to backend
-    console.log("Saving profile:", formData);
-    if (isChangingPassword) {
-      console.log("Changing password");
-      setPasswordData({
-        oldPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-    }
-
-    setIsEditing(false);
-    setIsChangingPassword(false);
-    alert("Profile updated successfully!");
 
     try {
       setLoading(true);
       setError("");
+
+      // Prepare request body based on what's being updated
+      const requestBody: Record<string, unknown> = {};
+
+      // Add profile fields if editing
+      if (isEditing) {
+        requestBody.firstName = formData.firstName;
+        requestBody.lastName = formData.lastName;
+        requestBody.age = formData.age ? Number(formData.age) : undefined;
+        requestBody.sex = formData.sex;
+        requestBody.address = formData.address;
+        requestBody.contactNumber = formData.contactNumber;
+      }
+
+      // Add password fields if changing password
+      if (isChangingPassword) {
+        requestBody.currentPassword = passwordData.oldPassword;
+        requestBody.newPassword = passwordData.newPassword;
+        requestBody.confirmPassword = passwordData.confirmPassword;
+      }
+
       const res = await fetchWithCredentials(API_ENDPOINTS.USER.PROFILE, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          age: formData.age ? Number(formData.age) : undefined,
-          sex: formData.sex,
-          address: formData.address,
-          contactNumber: formData.contactNumber,
-        }),
+        body: JSON.stringify(requestBody),
       });
+
       const data = await res.json();
+
       if (data.success) {
-        setFormData({
-          firstName: data.user.firstName || "",
-          lastName: data.user.lastName || "",
-          email: data.user.email || "",
-          age: data.user.age ? String(data.user.age) : "",
-          sex: data.user.sex || "",
-          address: data.user.address || "",
-          contactNumber: data.user.contactNumber || "",
-        });
-        setProfileImage(data.user.profileImage || "");
+        // Update form data with response
+        if (data.user) {
+          setFormData({
+            firstName: data.user.firstName || "",
+            lastName: data.user.lastName || "",
+            email: data.user.email || "",
+            age: data.user.age ? String(data.user.age) : "",
+            sex: data.user.sex || "",
+            address: data.user.address || "",
+            contactNumber: data.user.contactNumber || "",
+          });
+          setProfileImage(data.user.profileImage || "");
+        }
+
+        // Clear password fields if password was changed
+        if (isChangingPassword) {
+          setPasswordData({
+            oldPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          });
+        }
+
+        // Reset edit states
         setIsEditing(false);
-        alert("Profile updated successfully!");
+        setIsChangingPassword(false);
+
+        // Show success message
+        toast.success(data.message || "Profile updated successfully!");
       } else {
         setError(data.error || "Failed to update profile");
+        toast.error(data.error || "Failed to update profile");
       }
     } catch (err) {
-      setError(`Failed to update profile ${err}`);
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      setError(`Failed to update profile: ${errorMessage}`);
+      toast.error(`Failed to update profile: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -206,6 +285,7 @@ const ProfilePage = () => {
 
         if (!text) {
           setError("Empty response from server.");
+          toast.error("Empty response from server.");
           setLoading(false);
           return;
         }
@@ -213,8 +293,9 @@ const ProfilePage = () => {
         let data;
         try {
           data = JSON.parse(text);
-        } catch (err) {
+        } catch {
           setError("Failed to parse profile response: " + text);
+          toast.error("Failed to parse profile response: " + text);
           setLoading(false);
           return;
         }
@@ -232,9 +313,11 @@ const ProfilePage = () => {
           setProfileImage(data.user.profileImage || "");
         } else {
           setError(data.error || "Failed to fetch profile");
+          toast.error(data.error || "Failed to fetch profile");
         }
       } catch (error) {
         setError(`Failed to fetch profile ${error}`);
+        toast.error(`Failed to fetch profile ${error}`);
       }
       setLoading(false);
     };
@@ -592,6 +675,46 @@ const ProfilePage = () => {
                         )}
                       </button>
                     </div>
+
+                    {/* Password Strength Indicator */}
+                    {passwordData.newPassword && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div
+                            className="text-sm font-medium"
+                            style={{ color: "#59382a" }}
+                          >
+                            Password Strength:
+                          </div>
+                          <div
+                            className="text-sm font-semibold"
+                            style={{
+                              color: getPasswordStrength(
+                                passwordData.newPassword
+                              ).color,
+                            }}
+                          >
+                            {getPasswordStrength(passwordData.newPassword).text}
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${
+                                (getPasswordStrength(passwordData.newPassword)
+                                  .strength /
+                                  5) *
+                                100
+                              }%`,
+                              backgroundColor: getPasswordStrength(
+                                passwordData.newPassword
+                              ).color,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="relative">
                       <label

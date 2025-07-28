@@ -6,11 +6,14 @@ import Layout from "./components/Layout";
 import Home from "./components/Home/Home";
 import About from "./components/About/About";
 import Contact from "./components/Contact/Contact";
-import Products from "./components/Products";
+import Products from "./components/Products/Products";
 import Signup from "./services/auth/Signup";
 import Signin from "./services/auth/Signin";
 import AuthGate from "./components/AuthGate";
 import UserLayout from "./pages/user/UserLayout";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 // import Admin from "./pages/admin/Admin";
 // import Delivery from "./pages/delivery/Delivery";
@@ -61,14 +64,14 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      // {
-      //   path: "/admin",
-      //   element: (
-      //     <ProtectedRoute allowedRoles={['admin']}>
-      //       <Admin />
-      //     </ProtectedRoute>
-      //   ),
-      // },
+      {
+        path: "/admin",
+        element: (
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        ),
+      },
       // {
       //   path: "/delivery",
       //   element: (
@@ -82,7 +85,23 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+    </>
+  );
 };
 
 export default App;

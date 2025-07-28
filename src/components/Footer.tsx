@@ -31,7 +31,7 @@ const Footer = () => {
     e.preventDefault();
 
     if (!email) {
-      alert("Please enter a valid email address");
+      toast.error("Please enter a valid email address");
       return;
     }
 
@@ -50,10 +50,10 @@ const Footer = () => {
         toast.success("Subscribed to email updates");
         setEmail("");
       } else {
-        alert(`Error: ${response.text}`);
+        toast.error(`Error: ${response.text}`);
       }
     } catch (error) {
-      alert(`AN error occured ${error}`);
+      toast.error(`An error occured ${error}`);
     }
 
     setIsSubmiting(false);

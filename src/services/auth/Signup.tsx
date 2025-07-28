@@ -1,11 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { IoIosArrowBack } from "react-icons/io";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { toast } from "react-toastify";
 
 import bgVideo from "../../assets/video/auth_bg.mp4";
+import Lottie from "../../components/Lottie";
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,18 +26,31 @@ const Signup = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateName = (name) => {
+  // Redirect if user is already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      const redirectMap = {
+        admin: "/admin",
+        delivery: "/delivery",
+        user: "/user",
+      };
+      navigate(redirectMap[user.role], { replace: true });
+    }
+  }, [user, loading, navigate]);
+
+  const validateName = (name: string) => {
     const nameRegex = /^[a-zA-Z\s]+$/;
     return nameRegex.test(name) && name.trim().length > 0;
   };
 
-  const validateEmail = (email) => {
+  const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = (password: string) => {
     const minLength = password.length >= 8;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
@@ -53,7 +72,9 @@ const Signup = () => {
     };
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     // Clear all errors
     setFirstNameError("");
     setLastNameError("");
@@ -111,14 +132,69 @@ const Signup = () => {
       hasErrors = true;
     }
 
-    // If no errors, proceed with signup
-    if (!hasErrors) {
-      alert("Account created successfully!");
-      console.log("Form data:", { firstName, lastName, email, password });
+    // If there are errors, don't proceed
+    if (hasErrors) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const requestBody = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        password,
+      };
+
+      console.log("Sending signup request:", requestBody);
+
+      const response = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+      console.log("Signup response:", data);
+
+      if (data.success) {
+        toast.success("Account created successfully! Please sign in.");
+        navigate("/signin");
+      } else {
+        // Handle specific error messages
+        if (data.message === "Email already exists!") {
+          setEmailError(
+            "Email already exists. Please use a different email or sign in."
+          );
+          toast.error(
+            "Email already exists. Please use a different email or sign in."
+          );
+        } else {
+          toast.error(
+            data.message || "Failed to create account. Please try again."
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      toast.error("Server error. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const passwordValidation = validatePassword(password);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Lottie />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[100vh] w-[100vw] flex relative overflow-hidden">
@@ -177,6 +253,7 @@ const Signup = () => {
                   firstNameError ? "border-red-500" : "border-[#c1974e]"
                 }`}
                 placeholder="Enter your first name"
+                disabled={isSubmitting}
               />
               {firstNameError && (
                 <p className="mt-1 text-xs text-red-600">{firstNameError}</p>
@@ -198,6 +275,7 @@ const Signup = () => {
                   lastNameError ? "border-red-500" : "border-[#c1974e]"
                 }`}
                 placeholder="Enter your last name"
+                disabled={isSubmitting}
               />
               {lastNameError && (
                 <p className="mt-1 text-xs text-red-600">{lastNameError}</p>
@@ -219,6 +297,7 @@ const Signup = () => {
                   emailError ? "border-red-500" : "border-[#c1974e]"
                 }`}
                 placeholder="Enter your email address"
+                disabled={isSubmitting}
               />
               {emailError && (
                 <p className="mt-1 text-xs text-red-600">{emailError}</p>
@@ -241,11 +320,13 @@ const Signup = () => {
                     passwordError ? "border-red-500" : "border-[#c1974e]"
                   }`}
                   placeholder="Create a strong password"
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-[#67412c] hover:text-[#331d15] transition-colors"
+                  className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-[#67412c] hover:text-[#331d15] transition-colors disabled:opacity-50"
+                  disabled={isSubmitting}
                 >
                   {showPassword ? (
                     <AiOutlineEyeInvisible size={20} />
@@ -341,11 +422,13 @@ const Signup = () => {
                     confirmPasswordError ? "border-red-500" : "border-[#c1974e]"
                   }`}
                   placeholder="Confirm your password"
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-[#67412c] hover:text-[#331d15] transition-colors"
+                  className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-[#67412c] hover:text-[#331d15] transition-colors disabled:opacity-50"
+                  disabled={isSubmitting}
                 >
                   {showConfirmPassword ? (
                     <AiOutlineEyeInvisible size={20} />
@@ -364,9 +447,17 @@ const Signup = () => {
             <button
               type="button"
               onClick={handleSubmit}
-              className="cursor-pointer w-full bg-[#331d15] hover:bg-[#67412c] text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-300 transform hover:scale-[1.02]"
+              disabled={isSubmitting}
+              className="cursor-pointer w-full bg-[#331d15] hover:bg-[#67412c] text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
             >
-              Create Account
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating Account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
           </div>
 
