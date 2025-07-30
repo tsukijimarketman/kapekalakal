@@ -9,8 +9,11 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
+import { useAuth } from "../../contexts/AuthContext";
+import ProductsManagement from "../admin/product-section/ProductsManagement";
 
 const AdminDashboard = () => {
+  const { signout } = useAuth();
   const [darkMode, setDarkMode] = useState(() => {
     // Using in-memory storage instead of localStorage
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -53,7 +56,7 @@ const AdminDashboard = () => {
     >
       <div className="min-h-screen bg-[#f9f6ed] dark:bg-[#59382a] text-[#59382a] dark:text-[#f9f6ed]">
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 bg-[#efe8d2] dark:bg-[#67412c] border-b border-[#e1d0a7] dark:border-[#7a4e2e]">
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-[#efe8d2] dark:bg-[#67412c] border-b border-[#e1d0a7] dark:border-[#7a4e2e]">
           <h1 className="text-xl font-bold text-[#7a4e2e] dark:text-[#e1d0a7]">
             KapeKalakal Admin
           </h1>
@@ -74,10 +77,10 @@ const AdminDashboard = () => {
         </div>
 
         <div className="flex">
-          {/* Sidebar */}
+          {/* Fixed Sidebar */}
           <div
             className={`
-            fixed top-0 lg:static inset-y-0 left-0 z-50 w-64 h-screen lg:h-screen transform transition-transform duration-300 ease-in-out flex flex-col
+            fixed top-0 left-0 z-40 w-64 h-screen transform transition-transform duration-300 ease-in-out flex flex-col
             ${
               isSidebarOpen
                 ? "translate-x-0"
@@ -128,7 +131,10 @@ const AdminDashboard = () => {
 
             {/* Sign Out Button */}
             <div className="p-4 flex-shrink-0">
-              <button className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 transform hover:scale-105">
+              <button
+                onClick={signout}
+                className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 transform hover:scale-105"
+              >
                 <FaSignOutAlt size={20} />
                 <span>Sign Out</span>
               </button>
@@ -138,51 +144,70 @@ const AdminDashboard = () => {
           {/* Mobile Overlay */}
           {isSidebarOpen && (
             <div
-              className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+              className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
               onClick={toggleSidebar}
             />
           )}
 
           {/* Main Content */}
-          <div className="flex-1 lg:ml-0">
-            {activeItem === "Users" && (
-              <div className="p-6">
-                <h2 className="text-2xl font-bold mb-4">Users Management</h2>
-                <p>This is the users section of admin dashboard.</p>
-                {/* Replace this div with your Users component */}
-                <div className="mt-4 p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg">
-                  <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                    Users Component Goes Here
-                  </p>
+          <div className="flex-1 lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+            <div className="h-full overflow-y-auto">
+              {activeItem === "Users" && (
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold mb-4">Users Management</h2>
+                  <p>This is the users section of admin dashboard.</p>
+                  {/* Replace this div with your Users component */}
+                  <div className="mt-4 p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg">
+                    <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
+                      Users Component Goes Here
+                    </p>
+                  </div>
+                  {/* Add more content to test scrolling */}
+                  <div className="space-y-4 mt-8">
+                    {Array.from({ length: 20 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg"
+                      >
+                        <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
+                          Sample content item {i + 1} - This is to test the
+                          scrolling functionality
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeItem === "Products" && (
-              <div className="p-6">
-                <h2 className="text-2xl font-bold mb-4">Products Management</h2>
-                <p>This is the products section of admin dashboard.</p>
-                {/* Replace this div with your Products component */}
-                <div className="mt-4 p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg">
-                  <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                    Products Component Goes Here
-                  </p>
-                </div>
-              </div>
-            )}
+              {activeItem === "Products" && <ProductsManagement />}
 
-            {activeItem === "Orders" && (
-              <div className="p-6">
-                <h2 className="text-2xl font-bold mb-4">Orders Management</h2>
-                <p>This is the orders section of admin dashboard.</p>
-                {/* Replace this div with your Orders component */}
-                <div className="mt-4 p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg">
-                  <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                    Orders Component Goes Here
-                  </p>
+              {activeItem === "Orders" && (
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold mb-4">Orders Management</h2>
+                  <p>This is the orders section of admin dashboard.</p>
+                  {/* Replace this div with your Orders component */}
+                  <div className="mt-4 p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg">
+                    <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
+                      Orders Component Goes Here
+                    </p>
+                  </div>
+                  {/* Add more content to test scrolling */}
+                  <div className="space-y-4 mt-8">
+                    {Array.from({ length: 20 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg"
+                      >
+                        <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
+                          Sample order item {i + 1} - This is to test the
+                          scrolling functionality
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

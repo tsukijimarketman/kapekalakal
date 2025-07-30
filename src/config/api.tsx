@@ -4,14 +4,14 @@ export const API_BASE_URL =
 
 export const API_ENDPOINTS = {
   AUTH: {
-    SIGNIN: `${API_BASE_URL}/api/auth/signin`,
-    SIGNUP: `${API_BASE_URL}/api/auth/signup`,
-    VERIFY: `${API_BASE_URL}/api/auth/verify`,
-    SIGNOUT: `${API_BASE_URL}/api/auth/signout`,
+    SIGNIN: `${API_BASE_URL}/auth/signin`,
+    SIGNUP: `${API_BASE_URL}/auth/signup`,
+    VERIFY: `${API_BASE_URL}/auth/verify`,
+    SIGNOUT: `${API_BASE_URL}/auth/signout`,
   },
   USER: {
-    PROFILE: `${API_BASE_URL}/api/user/profile`,
-    PROFILE_IMAGE: `${API_BASE_URL}/api/user/profile-image`,
+    PROFILE: `${API_BASE_URL}/user/profile`,
+    PROFILE_IMAGE: `${API_BASE_URL}/user/profile-image`,
   },
 };
 
