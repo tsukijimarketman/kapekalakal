@@ -26,7 +26,7 @@ const Section4_About = () => {
             Gerick M. Velasquez
           </h3>
           <p className="text-base sm:text-lg font-semibold text-center mb-2 text-[#986836] dark:text-[#c0964f]">
-            Master Baiter
+            Master Roaster
           </p>
           <p className="text-sm sm:text-base text-center text-gray-700 dark:text-[#efe8d2]">
             15+ Years of experience in Coffee Baiting

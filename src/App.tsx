@@ -14,6 +14,7 @@ import UserLayout from "./pages/user/UserLayout";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserPanel from "./pages/user/UserPanel";
 
 // import Admin from "./pages/admin/Admin";
 // import Delivery from "./pages/delivery/Delivery";
@@ -61,6 +62,14 @@ const router = createBrowserRouter([
             <UserLayout>
               <Home />
             </UserLayout>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/userpanel",
+        element: (
+          <ProtectedRoute allowedRoles={["user"]}>
+            <UserPanel />
           </ProtectedRoute>
         ),
       },

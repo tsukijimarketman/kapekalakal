@@ -3,7 +3,7 @@ import { CgProfile } from "react-icons/cg";
 import { FiSun } from "react-icons/fi";
 import { LuShoppingCart, LuMoon } from "react-icons/lu";
 import { RxHamburgerMenu } from "react-icons/rx";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import ProfilePage from "../../components/ProfilePage";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -12,6 +12,7 @@ const UserNavbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const { signout } = useAuth();
+  const navigate = useNavigate();
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark" ||
@@ -127,7 +128,10 @@ const UserNavbar = () => {
             <CgProfile />
           </button>
 
-          <button className="bg-transparent hover:bg-[#debe7ee4] text-black dark:text-white px-3 py-3 rounded transition-colors duration-300 ease-in-out cursor-pointer">
+          <button
+            onClick={() => navigate("/userpanel")}
+            className="bg-transparent hover:bg-[#debe7ee4] text-black dark:text-white px-3 py-3 rounded transition-colors duration-300 ease-in-out cursor-pointer"
+          >
             <LuShoppingCart />
           </button>
 

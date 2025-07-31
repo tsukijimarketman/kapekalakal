@@ -22,7 +22,7 @@ interface UserFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (formData: UserFormData) => void;
-  user?: UserType | null;
+  editingUser?: UserType | null; // Changed from 'user' to 'editingUser' to match UsersManagement
   mode: "create" | "edit";
   loading?: boolean;
 }
@@ -31,7 +31,7 @@ const UserForm: React.FC<UserFormProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  user,
+  editingUser, // Changed from 'user' to 'editingUser'
   mode,
   loading = false,
 }) => {
@@ -52,18 +52,19 @@ const UserForm: React.FC<UserFormProps> = ({
 
   // Initialize form data when editing
   useEffect(() => {
-    if (user && mode === "edit") {
+    if (editingUser && mode === "edit") {
+      // Changed from 'user' to 'editingUser'
       setFormData({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        password: "", // Don't populate password for edit
-        role: user.role,
-        age: user.age,
-        sex: user.sex,
-        address: user.address || "",
-        contactNumber: user.contactNumber || "",
-        profileImage: user.profileImage || "",
+        firstName: editingUser.firstName,
+        lastName: editingUser.lastName,
+        email: editingUser.email,
+        password: "", // Don't populate password for edit mode
+        role: editingUser.role,
+        age: editingUser.age,
+        sex: editingUser.sex,
+        address: editingUser.address || "",
+        contactNumber: editingUser.contactNumber || "",
+        profileImage: editingUser.profileImage || "",
       });
     } else {
       // Reset form for create mode
@@ -81,7 +82,7 @@ const UserForm: React.FC<UserFormProps> = ({
       });
     }
     setErrors({});
-  }, [user, mode, isOpen]);
+  }, [editingUser, mode, isOpen]); // Changed from 'user' to 'editingUser'
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -118,9 +119,14 @@ const UserForm: React.FC<UserFormProps> = ({
       newErrors.email = "Please enter a valid email";
     }
 
+    // Only require password for create mode
     if (mode === "create" && !formData.password) {
       newErrors.password = "Password is required";
-    } else if (mode === "create" && formData.password.length < 6) {
+    } else if (
+      mode === "create" &&
+      formData.password &&
+      formData.password.length < 6
+    ) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
@@ -138,14 +144,19 @@ const UserForm: React.FC<UserFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      // For edit mode, only send password if it's provided
+      const submitData = { ...formData };
+      if (mode === "edit" && !submitData.password) {
+        delete submitData.password;
+      }
+      onSubmit(submitData);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black opacity-90 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-[#67412c] rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-[#7a4e2e]">
@@ -155,6 +166,7 @@ const UserForm: React.FC<UserFormProps> = ({
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            disabled={loading}
           >
             <FaTimes size={20} />
           </button>
@@ -175,10 +187,13 @@ const UserForm: React.FC<UserFormProps> = ({
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e] ${
-                  errors.firstName ? "border-red-500" : "border-gray-300"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7] ${
+                  errors.firstName
+                    ? "border-red-500"
+                    : "border-[#e1d0a7] dark:border-[#7a4e2e]"
                 }`}
                 placeholder="Enter first name"
+                disabled={loading}
               />
               {errors.firstName && (
                 <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
@@ -196,10 +211,13 @@ const UserForm: React.FC<UserFormProps> = ({
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e] ${
-                  errors.lastName ? "border-red-500" : "border-gray-300"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7] ${
+                  errors.lastName
+                    ? "border-red-500"
+                    : "border-[#e1d0a7] dark:border-[#7a4e2e]"
                 }`}
                 placeholder="Enter last name"
+                disabled={loading}
               />
               {errors.lastName && (
                 <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
@@ -207,76 +225,82 @@ const UserForm: React.FC<UserFormProps> = ({
             </div>
           </div>
 
-          {/* Email and Password */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
-                <FaEnvelope className="inline mr-2" />
-                Email *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e] ${
-                  errors.email ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter email address"
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
-                <FaLock className="inline mr-2" />
-                Password{" "}
-                {mode === "create" ? "*" : "(leave blank to keep current)"}
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e] ${
-                  errors.password ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder={
-                  mode === "create" ? "Enter password" : "Enter new password"
-                }
-              />
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-              )}
-            </div>
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
+              <FaEnvelope className="inline mr-2" />
+              Email *
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7] ${
+                errors.email
+                  ? "border-red-500"
+                  : "border-[#e1d0a7] dark:border-[#7a4e2e]"
+              }`}
+              placeholder="Enter email address"
+              disabled={loading}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
 
-          {/* Role and Age */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
-                <FaUserTag className="inline mr-2" />
-                Role *
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e]"
-              >
-                {USER_ROLES.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Password */}
+          <div>
+            <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
+              <FaLock className="inline mr-2" />
+              Password{" "}
+              {mode === "create" ? "*" : "(leave blank to keep current)"}
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7] ${
+                errors.password
+                  ? "border-red-500"
+                  : "border-[#e1d0a7] dark:border-[#7a4e2e]"
+              }`}
+              placeholder={
+                mode === "create"
+                  ? "Enter password"
+                  : "Leave blank to keep current password"
+              }
+              disabled={loading}
+            />
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
+          </div>
 
+          {/* Role */}
+          <div>
+            <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
+              <FaUserTag className="inline mr-2" />
+              Role *
+            </label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7]"
+              disabled={loading}
+            >
+              {USER_ROLES.map((role) => (
+                <option key={role.value} value={role.value}>
+                  {role.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Additional Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Age */}
             <div>
               <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
@@ -290,19 +314,19 @@ const UserForm: React.FC<UserFormProps> = ({
                 onChange={handleInputChange}
                 min="1"
                 max="120"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e] ${
-                  errors.age ? "border-red-500" : "border-gray-300"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7] ${
+                  errors.age
+                    ? "border-red-500"
+                    : "border-[#e1d0a7] dark:border-[#7a4e2e]"
                 }`}
                 placeholder="Enter age"
+                disabled={loading}
               />
               {errors.age && (
                 <p className="text-red-500 text-sm mt-1">{errors.age}</p>
               )}
             </div>
-          </div>
 
-          {/* Sex and Contact Number */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Sex */}
             <div>
               <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
@@ -313,7 +337,8 @@ const UserForm: React.FC<UserFormProps> = ({
                 name="sex"
                 value={formData.sex || ""}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e]"
+                className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7]"
+                disabled={loading}
               >
                 <option value="">Select sex</option>
                 {SEX_OPTIONS.map((option) => (
@@ -335,8 +360,9 @@ const UserForm: React.FC<UserFormProps> = ({
                 name="contactNumber"
                 value={formData.contactNumber}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e]"
+                className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7]"
                 placeholder="Enter contact number"
+                disabled={loading}
               />
             </div>
           </div>
@@ -352,8 +378,9 @@ const UserForm: React.FC<UserFormProps> = ({
               value={formData.address}
               onChange={(e) => handleInputChange(e as any)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e]"
+              className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7]"
               placeholder="Enter address"
+              disabled={loading}
             />
           </div>
 
@@ -368,8 +395,9 @@ const UserForm: React.FC<UserFormProps> = ({
               name="profileImage"
               value={formData.profileImage}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#986836] dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:border-[#7a4e2e]"
+              className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7]"
               placeholder="Enter profile image URL"
+              disabled={loading}
             />
           </div>
 
@@ -378,14 +406,15 @@ const UserForm: React.FC<UserFormProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 dark:text-[#e1d0a7] dark:bg-[#7a4e2e] dark:hover:bg-[#996936] transition-colors"
+              className="px-4 py-2 text-[#7a4e2e] dark:text-[#e1d0a7] bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-md hover:bg-[#d0b274] dark:hover:bg-[#996936] transition-colors"
+              disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-[#986836] text-white rounded-md hover:bg-[#7a4e2e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-[#b28341] text-[#f9f6ed] rounded-md hover:bg-[#8b6332] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading
                 ? "Saving..."

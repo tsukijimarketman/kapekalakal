@@ -18,6 +18,8 @@ export interface ProductFormData {
   price: string;
   category: "coffee" | "tea" | "equipment" | "accessories";
   image: string;
+  stock: string;
+  isActive: boolean;
 }
 
 export const PRODUCT_CATEGORIES = [

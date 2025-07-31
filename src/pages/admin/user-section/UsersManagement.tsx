@@ -1,221 +1,141 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import {
   FaPlus,
   FaEdit,
   FaTrash,
-  FaSearch,
   FaEye,
-  FaSort,
-  FaSortUp,
-  FaSortDown,
+  FaSearch,
+  FaSpinner,
+  FaExclamationTriangle,
+  FaUsers,
+  FaTimes,
   FaUser,
   FaEnvelope,
   FaUserTag,
   FaCalendarAlt,
 } from "react-icons/fa";
-import {
-  type UserType,
-  type UserFormData,
-  type SortField,
-  type SortOrder,
-} from "./types/userType";
+import { type UserType, type UserFormData } from "./types/userType";
 import UserForm from "./UserForm";
+import {
+  fetchUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getUserRoles,
+  type FetchUsersParams,
+} from "../../../services/usersApi";
 import Lottie from "../../../components/Lottie";
 
-// Mock data for demonstration (replace with API calls later)
-const mockUsers: UserType[] = [
-  {
-    _id: "1",
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    role: "user",
-    age: 25,
-    sex: "Male",
-    address: "123 Main St, City",
-    contactNumber: "+1234567890",
-    profileImage: "",
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15"),
-  },
-  {
-    _id: "2",
-    firstName: "Jane",
-    lastName: "Smith",
-    email: "jane.smith@example.com",
-    role: "admin",
-    age: 30,
-    sex: "Female",
-    address: "456 Oak Ave, Town",
-    contactNumber: "+1234567891",
-    profileImage: "",
-    createdAt: new Date("2024-01-10"),
-    updatedAt: new Date("2024-01-10"),
-  },
-  {
-    _id: "3",
-    firstName: "Mike",
-    lastName: "Johnson",
-    email: "mike.johnson@example.com",
-    role: "delivery",
-    age: 28,
-    sex: "Male",
-    address: "789 Pine Rd, Village",
-    contactNumber: "+1234567892",
-    profileImage: "",
-    createdAt: new Date("2024-01-20"),
-    updatedAt: new Date("2024-01-20"),
-  },
-  {
-    _id: "4",
-    firstName: "Sarah",
-    lastName: "Wilson",
-    email: "sarah.wilson@example.com",
-    role: "user",
-    age: 22,
-    sex: "Female",
-    address: "321 Elm St, Borough",
-    contactNumber: "+1234567893",
-    profileImage: "",
-    createdAt: new Date("2024-01-25"),
-    updatedAt: new Date("2024-01-25"),
-  },
-];
-
 const UsersManagement: React.FC = () => {
-  // State for users data
+  // State for users data from backend
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalUsers: 0,
+  });
 
-  // State for search and filter
+  // State for search and filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [sortField, setSortField] = useState<
+    "firstName" | "lastName" | "email" | "role" | "createdAt"
+  >("lastName");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // State for sorting
-  const [sortField, setSortField] = useState<SortField>("lastName");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  // State for modals and forms
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [editingUser, setEditingUser] = useState<UserType | null>(null);
+  const [viewingUser, setViewingUser] = useState<UserType | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserType | null>(null);
 
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const itemsPerPage = 10;
 
-  // State for form and actions
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [editingUser, setEditingUser] = useState<UserType | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [viewingUser, setViewingUser] = useState<UserType | null>(null);
+  // State for available roles
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   // State for action loading
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Load users on component mount
+  // Debounce search and load users
   useEffect(() => {
-    loadUsers();
+    setLoading(true);
+    setError(null);
+    const handler = setTimeout(() => {
+      loadUsers();
+    }, 400); // 400ms debounce
+    return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, selectedRole, sortField, sortOrder, currentPage]);
+
+  // Load available roles on component mount
+  useEffect(() => {
+    loadAvailableRoles();
   }, []);
 
-  // Mock function to load users (replace with API call)
+  // Function to load users from backend API
   const loadUsers = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      const params: FetchUsersParams = {
+        search: searchTerm,
+        role: selectedRole === "all" ? undefined : selectedRole,
+        sortBy: sortField,
+        sortOrder: sortOrder,
+        page: currentPage,
+        limit: itemsPerPage,
+      };
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const data = await fetchUsers(params);
 
-      setUsers(mockUsers);
+      setUsers(data.users);
+      setPagination(data.pagination);
+      setLoading(false);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch users");
-    } finally {
+      setError(err.message);
+      toast.error(err.message);
       setLoading(false);
     }
   };
 
-  // Filter and sort users
-  const filteredAndSortedUsers = users
-    .filter((user) => {
-      const matchesSearch =
-        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+  // Function to load available roles
+  const loadAvailableRoles = async () => {
+    try {
+      const roles = await getUserRoles();
+      setAvailableRoles(roles);
+    } catch (err: any) {
+      console.error("Failed to load roles:", err.message);
+    }
+  };
 
-      const matchesRole = selectedRole === "all" || user.role === selectedRole;
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
 
-      return matchesSearch && matchesRole;
-    })
-    .sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+  // Handle role filter change
+  const handleRoleFilter = (role: string) => {
+    setSelectedRole(role);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
 
-      switch (sortField) {
-        case "lastName":
-          aValue = a.lastName.toLowerCase();
-          bValue = b.lastName.toLowerCase();
-          break;
-        case "email":
-          aValue = a.email.toLowerCase();
-          bValue = b.email.toLowerCase();
-          break;
-        case "role":
-          aValue = a.role;
-          bValue = b.role;
-          break;
-        case "createdAt":
-          aValue = new Date(a.createdAt).getTime();
-          bValue = new Date(b.createdAt).getTime();
-          break;
-        default:
-          aValue = a.lastName.toLowerCase();
-          bValue = b.lastName.toLowerCase();
-      }
-
-      if (sortOrder === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
-    });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedUsers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentUsers = filteredAndSortedUsers.slice(startIndex, endIndex);
-
-  // Handle sorting
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
+  // Handle sort change
+  const handleSortChange = (field: typeof sortField) => {
+    if (field === sortField) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
       setSortOrder("asc");
     }
-    setCurrentPage(1);
-  };
-
-  // Get sort icon
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <FaSort className="text-gray-400" />;
-    }
-    return sortOrder === "asc" ? (
-      <FaSortUp className="text-[#986836]" />
-    ) : (
-      <FaSortDown className="text-[#986836]" />
-    );
-  };
-
-  // Handle search
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
-  };
-
-  // Handle role filter
-  const handleRoleFilter = (role: string) => {
-    setSelectedRole(role);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when sorting
   };
 
   // Handle create user
@@ -235,59 +155,51 @@ const UsersManagement: React.FC = () => {
   // Handle view user
   const handleViewUser = (user: UserType) => {
     setViewingUser(user);
+    setIsViewModalOpen(true);
   };
 
   // Handle delete user
-  const handleDeleteUser = (userId: string) => {
-    setDeleteConfirm(userId);
-  };
-
-  // Confirm delete
-  const confirmDelete = async () => {
-    if (!deleteConfirm) return;
-
-    try {
-      setActionLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setUsers(users.filter((user) => user._id !== deleteConfirm));
-      setDeleteConfirm(null);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-    } finally {
-      setActionLoading(false);
-    }
+  const handleDeleteUser = (user: UserType) => {
+    setDeletingUser(user);
+    setIsDeleteModalOpen(true);
   };
 
   // Handle form submit
   const handleFormSubmit = async (formData: UserFormData) => {
     try {
       setActionLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (formMode === "create") {
-        const newUser: UserType = {
-          _id: Date.now().toString(),
-          ...formData,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        setUsers([...users, newUser]);
+        await createUser(formData);
+        toast.success("User created successfully!");
       } else if (editingUser) {
-        setUsers(
-          users.map((user) =>
-            user._id === editingUser._id
-              ? { ...user, ...formData, updatedAt: new Date() }
-              : user
-          )
-        );
+        await updateUser(editingUser._id, formData);
+        toast.success("User updated successfully!");
       }
 
       setIsFormOpen(false);
-    } catch (error) {
-      console.error("Error saving user:", error);
+      setEditingUser(null);
+      loadUsers(); // Refresh the user list
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!deletingUser) return;
+
+    try {
+      setActionLoading(true);
+      await deleteUser(deletingUser._id);
+      toast.success("User deleted successfully!");
+      setIsDeleteModalOpen(false);
+      setDeletingUser(null);
+      loadUsers(); // Refresh the user list
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setActionLoading(false);
     }
@@ -359,50 +271,44 @@ const UsersManagement: React.FC = () => {
           >
             All
           </button>
-          <button
-            onClick={() => handleRoleFilter("user")}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              selectedRole === "user"
-                ? "bg-[#986836] text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:hover:bg-[#996936]"
-            }`}
-          >
-            Users
-          </button>
-          <button
-            onClick={() => handleRoleFilter("admin")}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              selectedRole === "admin"
-                ? "bg-[#986836] text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:hover:bg-[#996936]"
-            }`}
-          >
-            Admins
-          </button>
-          <button
-            onClick={() => handleRoleFilter("delivery")}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              selectedRole === "delivery"
-                ? "bg-[#986836] text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:hover:bg-[#996936]"
-            }`}
-          >
-            Delivery
-          </button>
+          {availableRoles.map((role) => (
+            <button
+              key={role}
+              onClick={() => handleRoleFilter(role)}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedRole === role
+                  ? "bg-[#986836] text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#7a4e2e] dark:text-[#e1d0a7] dark:hover:bg-[#996936]"
+              }`}
+            >
+              {role.charAt(0).toUpperCase() + role.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Lottie />
+          <div className="text-center">
+            <Lottie />
+          </div>
         </div>
       )}
 
       {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-          <p className="text-red-600">{error}</p>
+      {error && !loading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <FaExclamationTriangle className="text-4xl text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={loadUsers}
+              className="px-4 py-2 bg-[#b28341] text-[#f9f6ed] rounded-md hover:bg-[#8b6332] transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       )}
 
@@ -415,42 +321,58 @@ const UsersManagement: React.FC = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#e1d0a7] uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort("lastName")}
+                      onClick={() => handleSortChange("firstName")}
                       className="flex items-center gap-1 hover:text-[#986836] transition-colors"
                     >
                       <FaUser className="mr-1" />
                       Name
-                      {getSortIcon("lastName")}
+                      {sortField === "firstName" && (
+                        <span className="text-[#b28341]">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#e1d0a7] uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort("email")}
+                      onClick={() => handleSortChange("email")}
                       className="flex items-center gap-1 hover:text-[#986836] transition-colors"
                     >
                       <FaEnvelope className="mr-1" />
                       Email
-                      {getSortIcon("email")}
+                      {sortField === "email" && (
+                        <span className="text-[#b28341]">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#e1d0a7] uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort("role")}
+                      onClick={() => handleSortChange("role")}
                       className="flex items-center gap-1 hover:text-[#986836] transition-colors"
                     >
                       <FaUserTag className="mr-1" />
                       Role
-                      {getSortIcon("role")}
+                      {sortField === "role" && (
+                        <span className="text-[#b28341]">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#e1d0a7] uppercase tracking-wider">
                     <button
-                      onClick={() => handleSort("createdAt")}
+                      onClick={() => handleSortChange("createdAt")}
                       className="flex items-center gap-1 hover:text-[#986836] transition-colors"
                     >
                       <FaCalendarAlt className="mr-1" />
                       Created
-                      {getSortIcon("createdAt")}
+                      {sortField === "createdAt" && (
+                        <span className="text-[#b28341]">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
                     </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-[#e1d0a7] uppercase tracking-wider">
@@ -459,17 +381,34 @@ const UsersManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-[#67412c] divide-y divide-gray-200 dark:divide-[#7a4e2e]">
-                {currentUsers.length === 0 ? (
+                {users.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}
                       className="px-6 py-12 text-center text-gray-500 dark:text-[#e1d0a7]"
                     >
-                      No users found
+                      <FaUsers className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-lg">
+                        {searchTerm || selectedRole !== "all"
+                          ? "No users found matching your criteria"
+                          : "No users found"}
+                      </p>
+                      {(searchTerm || selectedRole !== "all") && (
+                        <button
+                          onClick={() => {
+                            setSearchTerm("");
+                            setSelectedRole("all");
+                            setCurrentPage(1);
+                          }}
+                          className="mt-4 px-4 py-2 text-[#b28341] hover:bg-[#b28341] hover:text-white border border-[#b28341] rounded-md transition-colors"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ) : (
-                  currentUsers.map((user) => (
+                  users.map((user) => (
                     <tr
                       key={user._id}
                       className="hover:bg-gray-50 dark:hover:bg-[#7a4e2e] transition-colors"
@@ -477,21 +416,21 @@ const UsersManagement: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-[#986836] flex items-center justify-center">
-                              <span className="text-white font-medium">
-                                {user.firstName.charAt(0)}
-                                {user.lastName.charAt(0)}
-                              </span>
-                            </div>
+                            {user.profileImage ? (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={user.profileImage}
+                                alt={`${user.firstName} ${user.lastName}`}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-[#986836] flex items-center justify-center">
+                                <FaUser className="text-white" />
+                              </div>
+                            )}
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7]">
                               {user.firstName} {user.lastName}
-                            </div>
-                            <div className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                              {user.age
-                                ? `${user.age} years old`
-                                : "Age not specified"}
                             </div>
                           </div>
                         </div>
@@ -500,9 +439,6 @@ const UsersManagement: React.FC = () => {
                         <div className="text-sm text-[#7a4e2e] dark:text-[#e1d0a7]">
                           {user.email}
                         </div>
-                        <div className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                          {user.contactNumber || "No contact number"}
-                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -510,31 +446,30 @@ const UsersManagement: React.FC = () => {
                             user.role
                           )}`}
                         >
-                          {user.role.charAt(0).toUpperCase() +
-                            user.role.slice(1)}
+                          {user.role}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7a4e2e] dark:text-[#e1d0a7]">
                         {formatDate(user.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleViewUser(user)}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                            title="View user details"
+                            className="text-[#986836] hover:text-[#7a4e2e] transition-colors"
+                            title="View user"
                           >
                             <FaEye size={16} />
                           </button>
                           <button
                             onClick={() => handleEditUser(user)}
-                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                             title="Edit user"
                           >
                             <FaEdit size={16} />
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(user._id)}
+                            onClick={() => handleDeleteUser(user)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                             title="Delete user"
                           >
@@ -548,110 +483,81 @@ const UsersManagement: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="bg-white dark:bg-[#67412c] px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-[#7a4e2e] sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
+      {/* Pagination Controls */}
+      {!loading && !error && pagination.totalPages > 1 && (
+        <div className="mt-6 flex justify-center">
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-1 rounded bg-[#e1d0a7] dark:bg-[#7a4e2e] text-[#7a4e2e] dark:text-[#e1d0a7] font-medium disabled:opacity-50"
+              disabled={pagination.currentPage === 1}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+            >
+              Previous
+            </button>
+            {/* Page Numbers */}
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+              (page) => (
                 <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  key={page}
+                  className={`px-3 py-1 rounded font-medium border transition-colors duration-200 ${
+                    page === pagination.currentPage
+                      ? "bg-[#b28341] text-[#f9f6ed] border-[#b28341]"
+                      : "bg-transparent text-[#7a4e2e] dark:text-[#e1d0a7] border-[#e1d0a7] dark:border-[#7a4e2e] hover:bg-[#e1d0a7] dark:hover:bg-[#7a4e2e]"
+                  }`}
+                  onClick={() => setCurrentPage(page)}
+                  disabled={page === pagination.currentPage}
                 >
-                  Previous
+                  {page}
                 </button>
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-[#7a4e2e] dark:text-[#e1d0a7]">
-                    Showing{" "}
-                    <span className="font-medium">{startIndex + 1}</span> to{" "}
-                    <span className="font-medium">
-                      {Math.min(endIndex, filteredAndSortedUsers.length)}
-                    </span>{" "}
-                    of{" "}
-                    <span className="font-medium">
-                      {filteredAndSortedUsers.length}
-                    </span>{" "}
-                    results
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    <button
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Previous
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            currentPage === page
-                              ? "z-10 bg-[#986836] border-[#986836] text-white"
-                              : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    )}
-                    <button
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </nav>
-                </div>
-              </div>
-            </div>
-          )}
+              )
+            )}
+            <button
+              className="px-3 py-1 rounded bg-[#e1d0a7] dark:bg-[#7a4e2e] text-[#7a4e2e] dark:text-[#e1d0a7] font-medium disabled:opacity-50"
+              disabled={pagination.currentPage === pagination.totalPages}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 
       {/* User Form Modal */}
       <UserForm
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingUser(null);
+        }}
         onSubmit={handleFormSubmit}
-        user={editingUser}
+        editingUser={editingUser}
         mode={formMode}
         loading={actionLoading}
       />
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#67412c] rounded-lg shadow-xl p-6 max-w-md w-full">
             <h3 className="text-lg font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-4">
-              Confirm Delete
+              Delete User
             </h3>
             <p className="text-[#996936] dark:text-[#e1d0a7] mb-6">
-              Are you sure you want to delete this user? This action cannot be
-              undone.
+              Are you sure you want to delete {deletingUser?.firstName}{" "}
+              {deletingUser?.lastName}? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setDeleteConfirm(null)}
+                onClick={() => setIsDeleteModalOpen(false)}
                 className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 dark:text-[#e1d0a7] dark:bg-[#7a4e2e] dark:hover:bg-[#996936] transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmDelete}
+                onClick={handleDeleteConfirm}
                 disabled={actionLoading}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -663,15 +569,15 @@ const UsersManagement: React.FC = () => {
       )}
 
       {/* User Details Modal */}
-      {viewingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {isViewModalOpen && viewingUser && (
+        <div className="fixed inset-0 bg-black opacity-90 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#67412c] rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-[#7a4e2e] dark:text-[#e1d0a7]">
+              <h3 className="text-lg font-medium text-[#7a4e2e] dark:text-[#e1d0a7]">
                 User Details
               </h3>
               <button
-                onClick={() => setViewingUser(null)}
+                onClick={() => setIsViewModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <FaTimes size={20} />
@@ -680,8 +586,8 @@ const UsersManagement: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
-                  Basic Information
+                <h4 className="font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-3">
+                  Personal Information
                 </h4>
                 <div className="space-y-2 text-sm">
                   <p>
@@ -715,7 +621,7 @@ const UsersManagement: React.FC = () => {
               </div>
 
               <div>
-                <h4 className="font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
+                <h4 className="font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-3">
                   Contact Information
                 </h4>
                 <div className="space-y-2 text-sm">
