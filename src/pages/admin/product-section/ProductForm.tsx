@@ -33,6 +33,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
     price: "",
     category: "coffee",
     image: "",
+    stock: "",
+    isActive: true,
   });
 
   const [errors, setErrors] = useState<Partial<ProductFormData>>({});
@@ -46,6 +48,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
         price: editingProduct.price.toString(),
         category: editingProduct.category,
         image: editingProduct.image,
+        stock: editingProduct.stock?.toString() || "0",
+        isActive: editingProduct.isActive ?? true,
       });
     } else {
       setFormData({
@@ -54,6 +58,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
         price: "",
         category: "coffee",
         image: "",
+        stock: "",
+        isActive: true,
       });
     }
     setErrors({});
