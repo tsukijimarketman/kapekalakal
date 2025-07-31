@@ -61,7 +61,7 @@ const ProductsManagement: React.FC = () => {
         search: searchTerm,
         category: selectedCategory,
         page: pagination.currentPage,
-        limit: 12,
+        limit: 9,
       })
         .then((data) => {
           setProducts(data.products);
@@ -117,7 +117,7 @@ const ProductsManagement: React.FC = () => {
         search: searchTerm,
         category: selectedCategory,
         page: pagination.currentPage,
-        limit: 12,
+        limit: 9,
       }).then((data) => {
         setProducts(data.products);
         setPagination(data.pagination);
@@ -149,7 +149,7 @@ const ProductsManagement: React.FC = () => {
         search: searchTerm,
         category: selectedCategory,
         page: pagination.currentPage,
-        limit: 12,
+        limit: 9,
       }).then((data) => {
         setProducts(data.products);
         setPagination(data.pagination);

@@ -1,12 +1,145 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FaSearch, FaStar, FaStarHalfAlt } from "react-icons/fa";
 import { FiFilter } from "react-icons/fi";
-import sample1 from "../../assets/images/sample1.png";
-import sample2 from "../../assets/images/sample2.png";
-import sample3 from "../../assets/images/sample3.png";
-import sample4 from "../../assets/images/sample4.png";
+import {
+  fetchProducts,
+  type FetchProductsParams,
+} from "../../services/productsApi";
+import { type ProductType } from "../../pages/admin/product-section/types/productType";
+import { PRODUCT_CATEGORIES } from "../../pages/admin/product-section/types/productType";
+import Lottie from "../Lottie";
 
 const Section_Product = () => {
+  // State for managing products data
+  const [products, setProducts] = useState<ProductType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // State for search and filter functionality
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  // State for pagination
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalProducts: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  // Function to fetch products from the backend
+  const loadProducts = async (params: FetchProductsParams) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Call the API to fetch products with search and filter parameters
+      const response = await fetchProducts(params);
+
+      // Update the products state with the fetched data
+      setProducts(response.products);
+
+      // Update pagination state
+      setPagination(response.pagination);
+    } catch (err: any) {
+      // Handle any errors that occur during fetching
+      setError(err.message || "Failed to fetch products");
+      console.error("Error fetching products:", err);
+    } finally {
+      // Always set loading to false when done
+      setLoading(false);
+    }
+  };
+
+  // useEffect hook to fetch products when component mounts or when search/filter changes
+  useEffect(() => {
+    // Create parameters object for the API call
+    const params: FetchProductsParams = {
+      search: searchTerm,
+      category: selectedCategory === "all" ? undefined : selectedCategory,
+      page: pagination.currentPage,
+      limit: 8, // Show 12 products per page
+    };
+
+    // Use setTimeout to debounce the search (wait 400ms after user stops typing)
+    const timeoutId = setTimeout(() => {
+      loadProducts(params);
+    }, 400);
+
+    // Cleanup function to clear the timeout if component unmounts or dependencies change
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedCategory, pagination.currentPage]); // Dependencies that trigger re-fetch
+
+  // Function to handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset to first page when searching
+  };
+
+  // Function to handle category filter changes
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset to first page when filtering
+  };
+
+  // Function to handle pagination
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, currentPage: newPage }));
+  };
+
+  // Function to format price with peso symbol
+  const formatPrice = (price: number) => {
+    return `₱ ${price.toFixed(2)}`;
+  };
+
+  // Function to render star rating (you can make this dynamic later)
+  const renderStars = (rating: number = 4.5) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    // Add full stars
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <FaStar
+          key={`full-${i}`}
+          className="text-yellow-400 text-xs sm:text-sm"
+        />
+      );
+    }
+
+    // Add half star if needed
+    if (hasHalfStar) {
+      stars.push(
+        <FaStarHalfAlt
+          key="half"
+          className="text-yellow-400 text-xs sm:text-sm"
+        />
+      );
+    }
+
+    // Add empty stars to make total 5
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <FaStar
+          key={`empty-${i}`}
+          className="text-gray-300 text-xs sm:text-sm"
+        />
+      );
+    }
+
+    return stars;
+  };
+
+  // Function to handle "Add to Cart" button click
+  const handleAddToCart = (product: ProductType) => {
+    // TODO: Implement add to cart functionality
+    console.log("Adding to cart:", product.name);
+    // You can add toast notification here later
+  };
+
   return (
     <section className="h-auto w-full flex flex-col">
       {/* Hero Section - Responsive padding and text sizes */}
@@ -34,175 +167,163 @@ const Section_Product = () => {
             <input
               type="text"
               placeholder="Search products"
-              className="w-full h-full outline-none bg-transparent px-2 text-gray-700 "
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full h-full outline-none bg-transparent px-2 text-gray-700"
             />
           </div>
 
           {/* Filter Buttons - Responsive layout */}
           <div className="w-full sm:w-auto flex flex-wrap sm:flex-nowrap justify-center sm:justify-end gap-2">
-            <button className="cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md bg-white  hover:bg-gray-100  text-xs sm:text-sm">
+            {/* All Products Filter */}
+            <button
+              onClick={() => handleCategoryChange("all")}
+              className={`cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md text-xs sm:text-sm ${
+                selectedCategory === "all"
+                  ? "bg-[#986836] text-white"
+                  : "bg-white hover:bg-gray-100"
+              }`}
+            >
               <FiFilter className="text-xs sm:text-sm" />
               <span>All</span>
             </button>
-            <button className="cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md bg-white  hover:bg-gray-100  text-xs sm:text-sm">
-              <FiFilter className="text-xs sm:text-sm" />
-              <span>Coffee</span>
-            </button>
-            <button className="cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md bg-white  hover:bg-gray-100  text-xs sm:text-sm">
-              <FiFilter className="text-xs sm:text-sm" />
-              <span>Tea</span>
-            </button>
-            <button className="cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md bg-white  hover:bg-gray-100  text-xs sm:text-sm">
-              <FiFilter className="text-xs sm:text-sm" />
-              <span>Equipment</span>
-            </button>
-            <button className="cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md bg-white  hover:bg-gray-100  text-xs sm:text-sm">
-              <FiFilter className="text-xs sm:text-sm" />
-              <span>Accessories</span>
-            </button>
+
+            {/* Category Filters */}
+            {PRODUCT_CATEGORIES.map((category) => (
+              <button
+                key={category.value}
+                onClick={() => handleCategoryChange(category.value)}
+                className={`cursor-pointer px-2 py-1 sm:px-3 sm:py-2 hover:scale-105 transition-transform flex items-center justify-center gap-1 border border-gray-400 rounded-md text-xs sm:text-sm ${
+                  selectedCategory === category.value
+                    ? "bg-[#986836] text-white"
+                    : "bg-white hover:bg-gray-100"
+                }`}
+              >
+                <FiFilter className="text-xs sm:text-sm" />
+                <span>{category.label}</span>
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <Lottie />
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <p className="text-red-500 text-lg mb-4">
+                Error loading products
+              </p>
+              <p className="text-gray-600">{error}</p>
+              <button
+                onClick={() => loadProducts({})}
+                className="mt-4 px-4 py-2 bg-[#986836] text-white rounded-md hover:bg-[#7a4e2e] transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Products Grid - Responsive grid layout */}
-        <div className="flex-1 flex items-center justify-center mb-4 md:mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 w-full max-w-7xl">
-            {/* Product Card 1 */}
-            <div className="group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl hover:scale-105 transition-transform duration-300 cursor-pointer">
-              <img
-                src={sample2}
-                alt="Premium Arabica Beans"
-                className="h-[60%] sm:h-[65%] md:h-[70%] w-full object-cover rounded-t-2xl"
-              />
-              <div className="p-3 sm:p-4 h-[40%] sm:h-[35%] md:h-[30%] flex flex-col justify-between">
-                <div>
-                  <p className="text-sm sm:text-base md:text-lg font-bold text-[#331d15] dark:text-[#e1d0a7] mb-1 sm:mb-2">
-                    Premium Arabica Beans
+        {!loading && !error && (
+          <>
+            <div className="flex-1 flex items-center justify-center mb-4 md:mb-8">
+              {products.length === 0 ? (
+                <div className="text-center py-20">
+                  <p className="text-gray-600 text-lg mb-2">
+                    No products found
                   </p>
-                  <div className="flex gap-1 items-center mb-2">
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStarHalfAlt className="text-yellow-400 text-xs sm:text-sm" />
-                    <span className="ml-1 text-xs sm:text-sm text-[#331d15] dark:text-[#e1d0a7]">
-                      (4.5)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <p className="text-lg sm:text-xl font-semibold text-[#331d15] dark:text-[#e1d0a7]">
-                    ₱ 299.99
+                  <p className="text-gray-500">
+                    {searchTerm || selectedCategory !== "all"
+                      ? "Try adjusting your search or filter criteria"
+                      : "No products available at the moment"}
                   </p>
-                  <button className="opacity-0 group-hover:opacity-100 sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 bg-[#986836] dark:bg-[#e1d0a7] hover:scale-105 px-2 sm:px-3 py-1 rounded-full text-white dark:text-[#331d15] text-xs sm:text-sm font-medium">
-                    Add to Cart
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 w-full max-w-7xl">
+                  {/* Dynamic Product Cards */}
+                  {products.map((product) => (
+                    <div
+                      key={product._id}
+                      className="group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    >
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="h-[60%] sm:h-[65%] md:h-[70%] w-full object-cover rounded-t-2xl"
+                        onError={(e) => {
+                          // Fallback image if the product image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.src =
+                            "https://via.placeholder.com/300x200?text=No+Image";
+                        }}
+                      />
+                      <div className="p-3 sm:p-4 h-[40%] sm:h-[35%] md:h-[30%] flex flex-col justify-between">
+                        <div>
+                          <p className="text-sm sm:text-base md:text-lg font-bold text-[#331d15] dark:text-[#e1d0a7] mb-1 sm:mb-2">
+                            {product.name}
+                          </p>
+                          <div className="flex gap-1 items-center mb-2">
+                            {renderStars()}
+                            <span className="ml-1 text-xs sm:text-sm text-[#331d15] dark:text-[#e1d0a7]">
+                              (4.5)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-end">
+                          <p className="text-lg sm:text-xl font-semibold text-[#331d15] dark:text-[#e1d0a7]">
+                            {formatPrice(product.price)}
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent card click when clicking button
+                              handleAddToCart(product);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 bg-[#986836] dark:bg-[#e1d0a7] hover:scale-105 px-2 sm:px-3 py-1 rounded-full text-white dark:text-[#331d15] text-xs sm:text-sm font-medium"
+                          >
+                            Add to Cart
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Product Card 2 */}
-            <div className="group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl hover:scale-105 transition-transform duration-300 cursor-pointer">
-              <img
-                src={sample3}
-                alt="Premium Tea Blend"
-                className="h-[60%] sm:h-[65%] md:h-[70%] w-full object-cover rounded-t-2xl"
-              />
-              <div className="p-3 sm:p-4 h-[40%] sm:h-[35%] md:h-[30%] flex flex-col justify-between">
-                <div>
-                  <p className="text-sm sm:text-base md:text-lg font-bold text-[#331d15] dark:text-[#e1d0a7] mb-1 sm:mb-2">
-                    Premium Tea Blend
-                  </p>
-                  <div className="flex gap-1 items-center mb-2">
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStarHalfAlt className="text-yellow-400 text-xs sm:text-sm" />
-                    <span className="ml-1 text-xs sm:text-sm text-[#331d15] dark:text-[#e1d0a7]">
-                      (4.5)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <p className="text-lg sm:text-xl font-semibold text-[#331d15] dark:text-[#e1d0a7]">
-                    ₱ 249.99
-                  </p>
-                  <button className="opacity-0 group-hover:opacity-100 sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 bg-[#986836] dark:bg-[#e1d0a7] hover:scale-105 px-2 sm:px-3 py-1 rounded-full text-white dark:text-[#331d15] text-xs sm:text-sm font-medium">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className="px-3 py-2 border border-gray-400 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Previous
+                </button>
 
-            {/* Product Card 3 */}
-            <div className="group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl hover:scale-105 transition-transform duration-300 cursor-pointer">
-              <img
-                src={sample4}
-                alt="Coffee Equipment"
-                className="h-[60%] sm:h-[65%] md:h-[70%] w-full object-cover rounded-t-2xl"
-              />
-              <div className="p-3 sm:p-4 h-[40%] sm:h-[35%] md:h-[30%] flex flex-col justify-between">
-                <div>
-                  <p className="text-sm sm:text-base md:text-lg font-bold text-[#331d15] dark:text-[#e1d0a7] mb-1 sm:mb-2">
-                    Coffee Equipment
-                  </p>
-                  <div className="flex gap-1 items-center mb-2">
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStarHalfAlt className="text-yellow-400 text-xs sm:text-sm" />
-                    <span className="ml-1 text-xs sm:text-sm text-[#331d15] dark:text-[#e1d0a7]">
-                      (4.5)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <p className="text-lg sm:text-xl font-semibold text-[#331d15] dark:text-[#e1d0a7]">
-                    ₱ 1,299.99
-                  </p>
-                  <button className="opacity-0 group-hover:opacity-100 sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 bg-[#986836] dark:bg-[#e1d0a7] hover:scale-105 px-2 sm:px-3 py-1 rounded-full text-white dark:text-[#331d15] text-xs sm:text-sm font-medium">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            </div>
+                <span className="px-3 py-2">
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </span>
 
-            {/* Product Card 4 */}
-            <div className="group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl hover:scale-105 transition-transform duration-300 cursor-pointer">
-              <img
-                src={sample1}
-                alt="Coffee Accessories"
-                className="h-[60%] sm:h-[65%] md:h-[70%] w-full object-cover rounded-t-2xl"
-              />
-              <div className="p-3 sm:p-4 h-[40%] sm:h-[35%] md:h-[30%] flex flex-col justify-between">
-                <div>
-                  <p className="text-sm sm:text-base md:text-lg font-bold text-[#331d15] dark:text-[#e1d0a7] mb-1 sm:mb-2">
-                    Coffee Accessories
-                  </p>
-                  <div className="flex gap-1 items-center mb-2">
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStar className="text-yellow-400 text-xs sm:text-sm" />
-                    <FaStarHalfAlt className="text-yellow-400 text-xs sm:text-sm" />
-                    <span className="ml-1 text-xs sm:text-sm text-[#331d15] dark:text-[#e1d0a7]">
-                      (4.5)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <p className="text-lg sm:text-xl font-semibold text-[#331d15] dark:text-[#e1d0a7]">
-                    ₱ 149.99
-                  </p>
-                  <button className="opacity-0 group-hover:opacity-100 sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 bg-[#986836] dark:bg-[#e1d0a7] hover:scale-105 px-2 sm:px-3 py-1 rounded-full text-white dark:text-[#331d15] text-xs sm:text-sm font-medium">
-                    Add to Cart
-                  </button>
-                </div>
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className="px-3 py-2 border border-gray-400 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Next
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
+            )}
+          </>
+        )}
       </div>
     </section>
   );
