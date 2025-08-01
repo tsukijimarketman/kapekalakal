@@ -5,11 +5,16 @@ import {
   fetchProducts,
   type FetchProductsParams,
 } from "../../services/productsApi";
-import { type ProductType } from "../../pages/admin/product-section/types/productType";
-import { PRODUCT_CATEGORIES } from "../../pages/admin/product-section/types/productType";
+import { type ProductType, PRODUCT_CATEGORIES } from "./ProductTypes";
 import Lottie from "../Lottie";
+import ProductModal from "./ProductModal"; // Import the modal component
+import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Section_Product = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   // State for managing products data
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +32,12 @@ const Section_Product = () => {
     hasNextPage: false,
     hasPrevPage: false,
   });
+
+  // Modal state
+  const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Function to fetch products from the backend
   const loadProducts = async (params: FetchProductsParams) => {
@@ -59,13 +70,13 @@ const Section_Product = () => {
       search: searchTerm,
       category: selectedCategory === "all" ? undefined : selectedCategory,
       page: pagination.currentPage,
-      limit: 8, // Show 12 products per page
+      limit: 8, // Show 8 products per page
     };
 
-    // Use setTimeout to debounce the search (wait 400ms after user stops typing)
+    // Use setTimeout to debounce the search (wait 300ms after user stops typing)
     const timeoutId = setTimeout(() => {
       loadProducts(params);
-    }, 400);
+    }, 300);
 
     // Cleanup function to clear the timeout if component unmounts or dependencies change
     return () => clearTimeout(timeoutId);
@@ -134,10 +145,30 @@ const Section_Product = () => {
   };
 
   // Function to handle "Add to Cart" button click
-  const handleAddToCart = (product: ProductType) => {
+  const handleAddToCart = (product: ProductType, quantity: number = 1) => {
     // TODO: Implement add to cart functionality
-    console.log("Adding to cart:", product.name);
+    console.log("Adding to cart:", product.name, "Quantity:", quantity);
+    if (!user) {
+      toast.error("Please log in to add to cart", {
+        onClose: () => navigate("/signin"), // Navigate when toast closes
+        autoClose: 2000, // Show for 2 seconds
+      });
+      return;
+    }
     // You can add toast notification here later
+  };
+
+  // Function to handle product card click
+  const handleProductClick = (product: ProductType) => {
+    if (!product.isActive || product.stock === 0) return;
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  // Function to close modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
   };
 
   return (
@@ -252,8 +283,28 @@ const Section_Product = () => {
                   {products.map((product) => (
                     <div
                       key={product._id}
-                      className="group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => handleProductClick(product)}
+                      className={`group bg-[#cfb275] dark:bg-[#7a4e2e] h-[350px] sm:h-[380px] md:h-[400px] border border-[#986836] dark:border-[#e1d0a7] rounded-2xl transition-all duration-200 cursor-pointer ${
+                        !product.isActive || product.stock === 0
+                          ? "opacity-50 grayscale cursor-not-allowed"
+                          : "hover:scale-[1.02] hover:shadow-lg"
+                      }`}
                     >
+                      {product.stock === 0 && (
+                        <div
+                          className=" absolute inset-0 flex items-center justify-center z-10"
+                          style={{
+                            background: "rgba(0,0,0,0.5)",
+                            color: "#fff",
+                            fontWeight: "bold",
+                            fontSize: "1.5rem",
+                            borderRadius: "1rem",
+                            pointerEvents: "none",
+                          }}
+                        >
+                          Out of Stock
+                        </div>
+                      )}
                       <img
                         src={product.image}
                         alt={product.name}
@@ -281,15 +332,6 @@ const Section_Product = () => {
                           <p className="text-lg sm:text-xl font-semibold text-[#331d15] dark:text-[#e1d0a7]">
                             {formatPrice(product.price)}
                           </p>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent card click when clicking button
-                              handleAddToCart(product);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 bg-[#986836] dark:bg-[#e1d0a7] hover:scale-105 px-2 sm:px-3 py-1 rounded-full text-white dark:text-[#331d15] text-xs sm:text-sm font-medium"
-                          >
-                            Add to Cart
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -325,6 +367,16 @@ const Section_Product = () => {
           </>
         )}
       </div>
+
+      {/* Product Modal */}
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onAddToCart={handleAddToCart}
+        />
+      )}
     </section>
   );
 };

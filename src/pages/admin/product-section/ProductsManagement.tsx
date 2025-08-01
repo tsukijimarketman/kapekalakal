@@ -287,68 +287,91 @@ const ProductsManagement: React.FC = () => {
             {products.map((product) => (
               <div
                 key={product._id}
-                className="bg-[#efe8d2] dark:bg-[#67412c] rounded-lg overflow-hidden border border-[#e1d0a7] dark:border-[#7a4e2e] hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                className={`bg-[#efe8d2] dark:bg-[#67412c] rounded-lg overflow-hidden border border-[#e1d0a7] dark:border-[#7a4e2e] hover:shadow-lg transition-all duration-200 transform hover:scale-105
+                  ${
+                    !product.isActive || product.stock === 0
+                      ? "opacity-50 grayscale"
+                      : ""
+                  }`}
+                style={{ position: "relative" }}
               >
-                {/* Product Image */}
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-200 hover:scale-110"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none"; // Hide broken images
-                    }}
-                  />
-                  {/* Category Badge */}
-                  <div className="absolute top-3 left-3">
-                    <span className="flex items-center gap-1 text-xs px-2 py-1 bg-[#b28341] text-[#f9f6ed] rounded-full font-medium capitalize backdrop-blur-sm">
-                      <div className="text-[#f9f6ed]">
-                        {getCategoryIcon(product.category)}
-                      </div>
-                      {product.category}
-                    </span>
+                {/* Product Image & Content (disable pointer events if inactive/out-of-stock) */}
+                <div
+                  className={`${
+                    !product.isActive || product.stock === 0
+                      ? "pointer-events-none"
+                      : ""
+                  }`}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-200 hover:scale-110"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none"; // Hide broken images
+                      }}
+                    />
+                    {/* Category Badge */}
+                    <div className="absolute top-3 left-3">
+                      <span className="flex items-center gap-1 text-xs px-2 py-1 bg-[#b28341] text-[#f9f6ed] rounded-full font-medium capitalize backdrop-blur-sm">
+                        <div className="text-[#f9f6ed]">
+                          {getCategoryIcon(product.category)}
+                        </div>
+                        {product.category}
+                      </span>
+                    </div>
+                    {/* Out of Stock Badge */}
+                    {product.stock === 0 && (
+                      <span className="absolute bottom-3 left-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow">
+                        Out of Stock
+                      </span>
+                    )}
                   </div>
-                  {/* Action Buttons */}
-                  <div className="absolute top-3 right-3 flex gap-2">
-                    <button
-                      onClick={() => handleEditProduct(product)}
-                      className="cursor-pointer p-2 bg-[#b28341] hover:bg-[#996936] text-[#f9f6ed] rounded-lg transition-colors duration-200 backdrop-blur-sm"
-                      title="Edit Product"
-                    >
-                      <FaEdit size={14} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(product._id)}
-                      className="cursor-pointer p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 backdrop-blur-sm"
-                      title="Delete Product"
-                    >
-                      <FaTrash size={14} />
-                    </button>
+
+                  {/* Product Content */}
+                  <div className="p-6">
+                    {/* Product Info */}
+                    <div className="mb-4">
+                      <h3 className="text-lg font-bold text-[#7a4e2e] dark:text-[#e1d0a7] mb-2 line-clamp-1">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-[#996936] dark:text-[#d0b274] line-clamp-2 mb-3">
+                        {product.description}
+                      </p>
+                      <p className="text-sm text-[#996936] dark:text-[#d0b274] line-clamp-2 mb-3">
+                        Stock: {product.stock ?? 0}
+                      </p>
+                      <div className="text-xl font-bold text-[#b28341]">
+                        {product.formattedPrice || formatPrice(product.price)}
+                      </div>
+                    </div>
+
+                    {/* Product Meta */}
+                    <div className="text-xs text-[#996936] dark:text-[#d0b274] border-t border-[#e1d0a7] dark:border-[#7a4e2e] pt-3">
+                      <div className="flex justify-between">
+                        <span>Created: {formatDate(product.createdAt)}</span>
+                        <span>Updated: {formatDate(product.updatedAt)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                {/* Product Content */}
-                <div className="p-6">
-                  {/* Product Info */}
-                  <div className="mb-4">
-                    <h3 className="text-lg font-bold text-[#7a4e2e] dark:text-[#e1d0a7] mb-2 line-clamp-1">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-[#996936] dark:text-[#d0b274] line-clamp-2 mb-3">
-                      {product.description}
-                    </p>
-                    <div className="text-xl font-bold text-[#b28341]">
-                      {product.formattedPrice || formatPrice(product.price)}
-                    </div>
-                  </div>
-
-                  {/* Product Meta */}
-                  <div className="text-xs text-[#996936] dark:text-[#d0b274] border-t border-[#e1d0a7] dark:border-[#7a4e2e] pt-3">
-                    <div className="flex justify-between">
-                      <span>Created: {formatDate(product.createdAt)}</span>
-                      <span>Updated: {formatDate(product.updatedAt)}</span>
-                    </div>
-                  </div>
+                {/* Action Buttons (always active for admin) */}
+                <div className="absolute top-3 right-3 flex gap-2 z-10">
+                  <button
+                    onClick={() => handleEditProduct(product)}
+                    className="cursor-pointer p-2 bg-[#b28341] hover:bg-[#996936] text-[#f9f6ed] rounded-lg transition-colors duration-200 backdrop-blur-sm"
+                    title="Edit Product"
+                  >
+                    <FaEdit size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(product._id)}
+                    className="cursor-pointer p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 backdrop-blur-sm"
+                    title="Delete Product"
+                  >
+                    <FaTrash size={14} />
+                  </button>
                 </div>
               </div>
             ))}

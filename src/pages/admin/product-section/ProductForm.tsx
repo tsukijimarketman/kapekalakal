@@ -82,6 +82,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
       newErrors.price = "Price must be a valid positive number";
     }
 
+    if (!formData.stock.trim()) {
+      newErrors.stock = "Stock is required";
+    } else if (isNaN(Number(formData.stock)) || Number(formData.stock) < 0) {
+      newErrors.stock = "Stock must be a valid non-negative number";
+    }
+
     if (!formData.image.trim()) {
       newErrors.image = "Product image is required";
     }
@@ -131,8 +137,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     formDataCloud.append("file", file);
     formDataCloud.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
     formDataCloud.append("folder", CLOUDINARY_FOLDER);
-    // Optionally, prepend 'product_' to the filename
-    // formDataCloud.append("public_id", `product_${Date.now()}_${file.name}`);
+    formDataCloud.append("public_id", `product_${Date.now()}_${file.name}`);
     try {
       const res = await fetch(CLOUDINARY_UPLOAD_URL, {
         method: "POST",
@@ -324,6 +329,25 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Stock */}
+          <div>
+            <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7] mb-2">
+              Stock *
+            </label>
+            <input
+              type="number"
+              name="stock"
+              value={formData.stock}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-lg bg-[#efe8d2] dark:bg-[#67412c] text-[#59382a] dark:text-[#f9f6ed] focus:outline-none focus:ring-2 focus:ring-[#b28341] transition-colors duration-200"
+            />
+            {errors.stock && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {errors.stock}
+              </p>
+            )}
           </div>
 
           {/* Form Actions */}

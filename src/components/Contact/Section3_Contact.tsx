@@ -183,7 +183,7 @@ const Section3_Contact = () => {
               ></iframe>
               <div className="bg-gray-100 dark:bg-[#67412c] p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <IoLocation className="w-5 h-5 text-amber-600 dark:text-[#cfb275] mr-2" />
+                  <IoLocation className="w-5 h-5 text-[#cfb275] mr-2" />
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-[#f8f5ee]">
                     Our Location
                   </h3>
@@ -193,34 +193,6 @@ const Section3_Contact = () => {
                 </p>
               </div>
             </div>
-
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-[#f8f5ee] mb-4">
-                Plan Your Visit
-              </h3>
-              <ul className="space-y-2 text-gray-600 dark:text-[#efe8d2]">
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-[#956939] dark:bg-[#986836] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  Free coffee tasting with every tour
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-[#956939] dark:bg-[#986836] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  Tours available Tuesday - Saturday
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-[#956939] dark:bg-[#986836] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  Group bookings welcome (advance notice required)
-                </li>
-                <li className="flex items-start">
-                  <span className="w-2 h-2 bg-[#956939] dark:bg-[#986836] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  Free parking available on-site
-                </li>
-              </ul>
-            </div>
-
-            <button className="cursor-pointer hover-lift w-full sm:w-auto bg-white dark:bg-[#67412c] border-2 border-[#956939] dark:border-[#986836] text-[#956939] dark:text-[#f8f5ee] font-semibold py-3 px-8 rounded-lg transition-colors duration-300">
-              Schedule a Tour
-            </button>
           </div>
         </div>
       </div>
