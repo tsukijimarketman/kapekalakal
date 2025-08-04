@@ -33,9 +33,9 @@ const UserPanel = () => {
     { name: "All", count: null },
     { name: "To Pay", count: null },
     { name: "To Receive", count: 3 },
+    { name: "In Transit", count: null },
     { name: "Completed", count: null },
     { name: "Cancelled", count: null },
-    { name: "Return/Refund", count: null },
   ];
 
   const toggleSidebar = () => {
