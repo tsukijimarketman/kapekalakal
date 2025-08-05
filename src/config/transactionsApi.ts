@@ -10,6 +10,8 @@ export interface TransactionItem {
 }
 
 export interface Transaction {
+  success: any;
+  message: string;
   _id: string;
   transactionId: string;
   customerId: string;
@@ -319,7 +321,8 @@ export const getStatusCounts = (transactions: Transaction[]) => {
   };
 
   transactions.forEach((transaction) => {
-    if (counts.hasOwnProperty(transaction.status)) {
+    // Fix ESLint warning - use 'in' operator instead of hasOwnProperty
+    if (transaction.status in counts) {
       counts[transaction.status as keyof typeof counts]++;
     }
   });
