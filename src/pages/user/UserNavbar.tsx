@@ -6,36 +6,13 @@ import { RxHamburgerMenu } from "react-icons/rx";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ProfilePage from "../../components/ProfilePage";
 import { useAuth } from "../../contexts/AuthContext";
-import { fetchUserTransactions } from "../../config/transactionsApi";
+import { useCart } from "../../contexts/useCart";
 
 const UserNavbar = () => {
-  const [toPayCount, setToPayCount] = useState(0);
   const location = useLocation();
-  const { user } = useAuth();
+  const { cartCount } = useCart();
   const [profileOpen, setProfileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Fetch To Pay count
-  useEffect(() => {
-    async function fetchToPay() {
-      if (!user) {
-        setToPayCount(0);
-        return;
-      }
-      try {
-        const data = await fetchUserTransactions({
-          status: "to_pay",
-          limit: 1,
-        });
-        setToPayCount(
-          data.transactions.length ? data.pagination.totalTransactions : 0
-        );
-      } catch {
-        setToPayCount(0);
-      }
-    }
-    fetchToPay();
-  }, [user, location]);
   const { signout } = useAuth();
   const navigate = useNavigate();
 
@@ -154,13 +131,13 @@ const UserNavbar = () => {
           </button>
 
           <button
-            onClick={() => navigate("/userpanel?tab=to_pay")}
+            onClick={() => navigate("/userpanel")}
             className="relative bg-transparent hover:bg-[#debe7ee4] text-black dark:text-white px-3 py-3 rounded transition-colors duration-300 ease-in-out cursor-pointer"
           >
             <LuShoppingCart />
-            {toPayCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-                {toPayCount}
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center z-500">
+                {cartCount}
               </span>
             )}
           </button>
@@ -182,13 +159,13 @@ const UserNavbar = () => {
             <CgProfile />
           </button>
           <button
-            onClick={() => navigate("/userpanel?tab=to_pay")}
+            onClick={() => navigate("/userpanel")}
             className="relative bg-transparent hover:bg-[#debe7ee4] dark:text-white text-black px-3 py-3 rounded transition-colors duration-300 ease-in-out"
           >
             <LuShoppingCart />
-            {toPayCount > 0 && (
+            {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-                {toPayCount}
+                {cartCount}
               </span>
             )}
           </button>

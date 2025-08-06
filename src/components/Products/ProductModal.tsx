@@ -5,8 +5,9 @@ import type { ProductType } from "./ProductTypes";
 import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { createTransaction } from "../../config/transactionsApi";
+import { addToCart } from "../../services/cartApi";
 import { API_BASE_URL } from "../../config/api";
+import { useCart } from "../../contexts/useCart";
 
 interface ProductModalProps {
   product: ProductType;
@@ -22,6 +23,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   onAddToCart,
 }) => {
   const { user } = useAuth();
+  const { refreshCart } = useCart();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   // No local state for shipping address or payment method; fetched dynamically when adding to cart.
@@ -88,49 +90,16 @@ const ProductModal: React.FC<ProductModalProps> = ({
     setIsLoading(true);
 
     try {
-      // Fetch user profile to get shipping address
-      const res = await fetch(`${API_BASE_URL}/user/profile`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const data = await res.json();
-      const userAddress = data.user?.address?.trim();
-
-      if (!userAddress) {
-        toast.error(
-          "No shipping address found in your profile. Please update your address in your profile page."
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      // Create transaction using our API
-      const transactionData = {
-        items: [
-          {
-            productId: product._id,
-            quantity: quantity,
-          },
-        ],
-        paymentMethod: "COD" as const,
-        shippingAddress: userAddress,
-      };
-
-      const response = await createTransaction(transactionData);
-
-      if (response && response._id) {
-        toast.success("Product added to cart successfully!");
-
-        // Call the original onAddToCart for any UI updates
+      const result = await addToCart(product._id, quantity);
+      if (result.success) {
+        toast.success("Product added to cart!");
         onAddToCart(product, quantity);
-
-        // Close modal
+        refreshCart();
         onClose();
       } else {
-        toast.error((response && response.message) || "Failed to add to cart");
+        toast.error(result.message || "Failed to add to cart");
       }
     } catch (error: any) {
-      console.error("Add to cart error:", error);
       toast.error(error.message || "Failed to add to cart");
     } finally {
       setIsLoading(false);
