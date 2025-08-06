@@ -1,4 +1,20 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+
+// --- useDebounce hook ---
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
+import { getCart, removeFromCart } from "../../../services/cartApi";
+import { toast } from "react-toastify"; // For user feedback
 
 interface CartItem {
   id: string;
@@ -11,77 +27,67 @@ interface CartItem {
 }
 
 const ToPay: React.FC = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "1",
-      productName: "Premium Arabica Coffee Beans 250g",
-      price: 82,
-      originalPrice: 205,
-      quantity: 1,
-      image: "/api/placeholder/80/80",
-      selected: true,
-    },
-    {
-      id: "2",
-      productName: "Espresso Blend Coffee Beans 500g",
-      price: 150,
-      quantity: 2,
-      image: "/api/placeholder/80/80",
-      selected: false,
-    },
-    {
-      id: "3",
-      productName: "French Press Coffee Maker",
-      price: 45,
-      quantity: 1,
-      image: "/api/placeholder/80/80",
-      selected: true,
-    },
-    {
-      id: "4",
-      productName: "Colombian Single Origin Coffee 1kg",
-      price: 320,
-      originalPrice: 400,
-      quantity: 1,
-      image: "/api/placeholder/80/80",
-      selected: false,
-    },
-    {
-      id: "5",
-      productName: "Coffee Grinder Manual",
-      price: 125,
-      quantity: 1,
-      image: "/api/placeholder/80/80",
-      selected: false,
-    },
-    {
-      id: "6",
-      productName: "Ceramic Coffee Mug Set",
-      price: 89,
-      quantity: 3,
-      image: "/api/placeholder/80/80",
-      selected: false,
-    },
-  ]);
-
+  // --- State and hooks: always at the top ---
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]); // Will fetch real data from backend
   const [searchQuery, setSearchQuery] = useState("");
-
+  // Debounced search value for optimized filtering
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [deliveryAddress, setDeliveryAddress] = useState({
     name: "Juan Dela Cruz",
     phone: "(+63) 9123456789",
     address: "123 Coffee Street, Pasig City, Metro Manila 1600",
   });
-
   const shippingFee = 120;
 
-  // Filter cart items based on search query
-  const filteredCartItems = useMemo(() => {
-    if (!searchQuery.trim()) return cartItems;
-    return cartItems.filter((item) =>
-      item.productName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [cartItems, searchQuery]);
+  // --- Fetch cart from backend on mount ---
+  useEffect(() => {
+    const fetchCart = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await getCart();
+        if (
+          response.success &&
+          response.data &&
+          Array.isArray(response.data.items)
+        ) {
+          // Transform backend cart items to frontend CartItem[]
+          const items = response.data.items.map((item: any) => ({
+            id: item._id,
+            productId: item.product, // backend product ObjectId
+            productName: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+            selected: false, // default: not selected
+          }));
+          setCartItems(items);
+        } else {
+          setCartItems([]);
+        }
+      } catch (err: any) {
+        setError("Failed to fetch cart. Please try again.");
+        toast.error("Failed to fetch cart.");
+        setCartItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCart();
+  }, []); // Run only on mount
 
+  // --- Memoized filtered cart items ---
+  // Use debounced search value for optimized filtering
+  const filteredCartItems = useMemo(() => {
+    if (!debouncedSearch.trim()) return cartItems;
+    return cartItems.filter((item) =>
+      item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+  }, [cartItems, debouncedSearch]);
+
+  // --- Cart handlers ---
   const handleQuantityChange = (id: string, change: number) => {
     setCartItems((items) =>
       items.map((item) =>
@@ -113,10 +119,22 @@ const ToPay: React.FC = () => {
     );
   };
 
-  const handleRemoveItem = (id: string) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
+  // Remove item from cart (backend + frontend)
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const handleRemoveItem = async (id: string) => {
+    setRemovingItemId(id);
+    try {
+      await removeFromCart(id);
+      setCartItems((items) => items.filter((item) => item.id !== id));
+      toast.success("Item removed from cart.");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to remove item.");
+    } finally {
+      setRemovingItemId(null);
+    }
   };
 
+  // --- Derived values ---
   const selectedItems = cartItems.filter((item) => item.selected);
   const merchandiseSubtotal = selectedItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -127,7 +145,25 @@ const ToPay: React.FC = () => {
     merchandiseSubtotal +
     vatAmount +
     (selectedItems.length > 0 ? shippingFee : 0);
+  const hasSelectedItems = selectedItems.length > 0;
 
+  // --- Main return: render loading, error, empty, or cart UI ---
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#f9f6ed] dark:bg-[#59382a]">
+        <div className="text-[#996936] dark:text-[#e1d0a7] text-xl">
+          Loading your cart...
+        </div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#f9f6ed] dark:bg-[#59382a]">
+        <div className="text-red-600 text-xl">{error}</div>
+      </div>
+    );
+  }
   if (cartItems.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#f9f6ed] dark:bg-[#59382a]">
@@ -142,8 +178,6 @@ const ToPay: React.FC = () => {
       </div>
     );
   }
-
-  const hasSelectedItems = selectedItems.length > 0;
 
   return (
     <div className="bg-[#f9f6ed] dark:bg-[#59382a] flex flex-col min-h-0 flex-1">
@@ -304,7 +338,7 @@ const ToPay: React.FC = () => {
                           <div className="col-span-1 text-center">
                             <button
                               onClick={() => handleRemoveItem(item.id)}
-                              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors"
+                              className="cursor-pointer text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors"
                             >
                               Delete
                             </button>
