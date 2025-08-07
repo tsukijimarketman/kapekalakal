@@ -1,4 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
+import DeliveryAddressModal from "./modal/DeliveryAddressModal";
+import { getProfile } from "../../../services/usersApi";
+import PaymentMethodModal from "./modal/PaymentMethodModal";
 
 // --- useDebounce hook ---
 function useDebounce<T>(value: T, delay: number): T {
@@ -27,6 +30,37 @@ interface CartItem {
 }
 
 const ToPay: React.FC = () => {
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to Cash on Delivery
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  const handlePaymentMethodChange = () => {
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentMethodSave = (newPaymentMethod: string) => {
+    setPaymentMethod(newPaymentMethod);
+    setIsPaymentModalOpen(false);
+  };
+
+  const handlePaymentModalClose = () => {
+    setIsPaymentModalOpen(false);
+  };
+
+  const getPaymentMethodDisplayName = (method: string) => {
+    switch (method) {
+      case "gcash":
+        return "GCash";
+      case "paymaya":
+        return "PayMaya";
+      case "visa":
+        return "Visa";
+      case "mastercard":
+        return "MasterCard";
+      case "cod":
+      default:
+        return "Cash on Delivery";
+    }
+  };
   // --- State and hooks: always at the top ---
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,11 +69,45 @@ const ToPay: React.FC = () => {
   // Debounced search value for optimized filtering
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [deliveryAddress, setDeliveryAddress] = useState({
-    name: "Juan Dela Cruz",
-    phone: "(+63) 9123456789",
-    address: "123 Coffee Street, Pasig City, Metro Manila 1600",
+    name: "",
+    phone: "",
+    address: "",
   });
   const shippingFee = 120;
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
+  const handleAddressChange = () => {
+    setIsAddressModalOpen(true);
+  };
+
+  const handleAddressSave = (newAddress: {
+    name: string;
+    phone: string;
+    address: string;
+  }) => {
+    setDeliveryAddress(newAddress);
+    setIsAddressModalOpen(false);
+  };
+
+  const handleAddressModalClose = () => {
+    setIsAddressModalOpen(false);
+  };
+
+  useEffect(() => {
+    async function fetchAddress() {
+      try {
+        const user = await getProfile();
+        setDeliveryAddress({
+          name: `${user.firstName} ${user.lastName}`,
+          phone: user.contactNumber || "",
+          address: user.address || "",
+        });
+      } catch (error) {
+        console.error("Failed to fetch user profile", error);
+      }
+    }
+    fetchAddress();
+  }, []);
 
   // --- Fetch cart from backend on mount ---
   useEffect(() => {
@@ -405,7 +473,10 @@ const ToPay: React.FC = () => {
                       </svg>
                       Delivery Address
                     </h3>
-                    <button className="text-[#b28341] text-sm font-medium hover:text-[#996936] transition-colors">
+                    <button
+                      onClick={handleAddressChange}
+                      className="cursor-pointer text-[#b28341] text-sm font-medium hover:text-[#996936] transition-colors"
+                    >
                       Change
                     </button>
                   </div>
@@ -476,16 +547,31 @@ const ToPay: React.FC = () => {
                     <h3 className="text-[#7a4e2e] dark:text-[#e1d0a7] font-semibold">
                       Payment Method
                     </h3>
-                    <button className="text-[#b28341] text-sm font-medium hover:text-[#996936] transition-colors">
+                    <button
+                      onClick={handlePaymentMethodChange}
+                      className="text-[#b28341] text-sm font-medium hover:text-[#996936] transition-colors"
+                    >
                       CHANGE
                     </button>
                   </div>
                   <div className="mt-2 text-[#59382a] dark:text-[#f9f6ed] text-sm">
-                    Cash on Delivery
+                    {getPaymentMethodDisplayName(paymentMethod)}
                   </div>
                 </div>
               </div>
             )}
+            <DeliveryAddressModal
+              isOpen={isAddressModalOpen}
+              onClose={handleAddressModalClose}
+              currentAddress={deliveryAddress}
+              onSave={handleAddressSave}
+            />
+            <PaymentMethodModal
+              isOpen={isPaymentModalOpen}
+              onClose={handlePaymentModalClose}
+              currentPaymentMethod={paymentMethod}
+              onSave={handlePaymentMethodSave}
+            />
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { UserType } from "../pages/admin/user-section/types/userType";
+import { API_BASE_URL } from "../config/api";
 
 // Get the API base URL from environment variables or use localhost as fallback
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -186,3 +187,11 @@ export async function getUserRoles(): Promise<string[]> {
     );
   }
 }
+
+export const getProfile = async () => {
+  const response = await axios.get(`${API_BASE_URL}/user/profile`, {
+    withCredentials: true,
+  });
+  if (!response.data.success) throw new Error("Failed to fetch user profile");
+  return response.data.user;
+};
