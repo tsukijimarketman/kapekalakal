@@ -15,6 +15,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserPanel from "./pages/user/UserPanel";
+import PaymentSuccess from "./components/PaymentSuccess";
 
 // import Admin from "./pages/admin/Admin";
 // import Delivery from "./pages/delivery/Delivery";
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
       {
         path: "/signin",
         element: <Signin />,
+      },
+      {
+        path: "/payment-success",
+        element: <PaymentSuccess />,
       },
       {
         path: "/user",

@@ -226,25 +226,81 @@ const ToPay: React.FC = () => {
   // Handle successful card payment
   const handleCardPaymentSuccess = async (paymentData: any) => {
     try {
+      // Ensure shipping address is present
+      if (!deliveryAddress?.address || !deliveryAddress.address.trim()) {
+        toast.error("Delivery address is required before completing payment.");
+        return;
+      }
+
+      const itemsPayload = selectedItems.map((it: any) => ({
+        productId: it.productId || it._id,
+        quantity: it.quantity,
+      }));
+
       const orderData = {
-        items: selectedItems,
-        total: grandTotal,
-        vat: vatAmount,
-        shipping: shippingFee,
-        paymentMethod: "card",
+        items: itemsPayload,
+        paymentMethod: "Stripe",
         paymentIntentId: paymentData.paymentIntentId,
-        deliveryAddress,
+        shippingAddress: deliveryAddress.address.trim(),
       };
+
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/orders`,
+        `${import.meta.env.VITE_API_URL}/transactions/paid`,
         orderData,
         { withCredentials: true }
       );
       toast.success("Order placed successfully!");
-      navigate("/userpanel");
-    } catch (error) {
-      console.error("Error placing order:", error);
-      toast.error("Failed to place order. Please try again.");
+      navigate("/payment-success");
+    } catch (error: any) {
+      console.error("Error placing order:", error?.response?.data || error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to place order. Please try again."
+      );
+    }
+  };
+
+  // Initiate PayMongo redirect for GCash / GrabPay
+  const initiatePaymongoRedirect = async (type: "gcash" | "grab_pay") => {
+    try {
+      const itemsPayload = selectedItems.map((it: any) => ({
+        productId: it.productId || it._id,
+        quantity: it.quantity,
+      }));
+
+      // Create Source on backend (PayMongo expects amount in centavos)
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_API_URL}/payment/source`,
+        {
+          amount: Math.round(grandTotal * 100),
+          currency: "PHP",
+          type, // "gcash" | "grab_pay"
+          redirectUrl: `${window.location.origin}/payment-success`,
+        },
+        { withCredentials: true }
+      );
+
+      const source = data?.data;
+      const sourceId = source?.id;
+      const checkoutUrl = source?.attributes?.redirect?.checkout_url;
+      if (!sourceId || !checkoutUrl) {
+        throw new Error("Failed to initialize payment source");
+      }
+
+      // Stash payload for confirmation on success page
+      const checkoutPayload = {
+        provider: type,
+        sourceId,
+        items: itemsPayload,
+        shippingAddress: deliveryAddress?.address || "",
+      };
+      localStorage.setItem("checkoutPayload", JSON.stringify(checkoutPayload));
+
+      // Redirect to PayMongo hosted page
+      window.location.href = checkoutUrl;
+    } catch (err: any) {
+      console.error("PayMongo init error:", err);
+      toast.error(err?.message || "Failed to initiate payment");
     }
   };
 
@@ -260,6 +316,16 @@ const ToPay: React.FC = () => {
     }
     if (selectedItems.length === 0) {
       toast.error("Please select at least one item to order");
+      return;
+    }
+
+    // PayMongo providers: redirect flow
+    if (paymentMethod === "gcash") {
+      await initiatePaymongoRedirect("gcash");
+      return;
+    }
+    if (paymentMethod === "grab_pay") {
+      await initiatePaymongoRedirect("grab_pay");
       return;
     }
 
@@ -296,7 +362,7 @@ const ToPay: React.FC = () => {
           { withCredentials: true }
         );
         toast.success("Order placed successfully! (COD)");
-        navigate("/userpanel");
+        navigate("/payment-success");
       }
     } catch (error: any) {
       toast.error(
