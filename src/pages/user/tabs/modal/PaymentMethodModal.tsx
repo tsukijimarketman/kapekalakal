@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import Gcash from "../../../../assets/images/gcash.png";
+import GrabPay from "../../../../assets/images/grabpay.png";
+import Visa from "../../../../assets/images/visa.png";
+import { Elements } from "@stripe/react-stripe-js";
+import { stripePromise } from "../../../../contexts/StripeContext";
+import { StripeCardElement } from "../../../../components/StripeCardElement";
 
 interface PaymentMethodModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentPaymentMethod: string;
   onSave: (paymentMethod: string) => void;
+  totalAmount?: number; // Add totalAmount prop
+  onSuccess?: (data: any) => void; // Add onSuccess prop for card payments
 }
 
 const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
@@ -13,6 +21,8 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
   onClose,
   currentPaymentMethod,
   onSave,
+  totalAmount = 0,
+  onSuccess,
 }) => {
   const [selectedMethod, setSelectedMethod] =
     useState<string>(currentPaymentMethod);
@@ -22,35 +32,26 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
       id: "gcash",
       name: "GCash",
       icon: (
-        <div className="w-8 h-8 bg-[#007dfe] rounded-lg flex items-center justify-center">
-          <span className="text-white text-xs font-bold">G</span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+          <img src={Gcash} alt="GCash" />
         </div>
       ),
     },
     {
-      id: "paymaya",
-      name: "PayMaya",
+      id: "grab_pay",
+      name: "GrabPay",
       icon: (
-        <div className="w-8 h-8 bg-[#00d4ff] rounded-lg flex items-center justify-center">
-          <span className="text-white text-xs font-bold">P</span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+          <img src={GrabPay} alt="GrabPay" />
         </div>
       ),
     },
     {
-      id: "visa",
+      id: "card", // Visa as card payment method
       name: "Visa",
       icon: (
-        <div className="w-8 h-8 bg-[#1a1f71] rounded-lg flex items-center justify-center">
-          <span className="text-white text-xs font-bold">V</span>
-        </div>
-      ),
-    },
-    {
-      id: "mastercard",
-      name: "MasterCard",
-      icon: (
-        <div className="w-8 h-8 bg-[#eb001b] rounded-lg flex items-center justify-center">
-          <span className="text-white text-xs font-bold">M</span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+          <img src={Visa} alt="Visa" />
         </div>
       ),
     },
@@ -82,7 +83,12 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
 
   // Handle save
   const handleSave = () => {
-    onSave(selectedMethod);
+    // For card payments, don't save here - let Stripe handle it
+    if (selectedMethod === "card") {
+      return; // StripeCardElement handles payment and calls onSuccess
+    }
+
+    onSave(selectedMethod); // Use selectedMethod instead of currentPaymentMethod
     toast.success("Payment method updated successfully");
     onClose();
   };
@@ -206,23 +212,65 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
               )}
             </label>
           ))}
+
+          {/* Stripe Card Element - Show when card is selected */}
+          {selectedMethod === "card" && (
+            <div className="mt-6 p-4 bg-[#f9f6ed] dark:bg-[#59382a] border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-lg">
+              <Elements stripe={stripePromise}>
+                <StripeCardElement
+                  totalAmount={totalAmount}
+                  onSuccess={(paymentIntent) => {
+                    console.log("Payment successful!", paymentIntent);
+                    // Handle successful payment
+                    // You can close the modal and show a success message
+                    if (onSuccess) {
+                      onSuccess({
+                        paymentMethod: "card",
+                        paymentIntentId: paymentIntent.id,
+                        // Add any other data you need
+                      });
+                    }
+                    onClose(); // Close the modal after successful payment
+                  }}
+                  onCancel={() => {
+                    // Handle cancellation
+                    onClose();
+                  }}
+                />
+              </Elements>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-3 p-6 bg-[#f9f6ed] dark:bg-[#59382a] border-t border-[#e1d0a7] dark:border-[#7a4e2e]">
-          <button
-            onClick={handleCancel}
-            className="flex-1 py-3 px-4 bg-white dark:bg-[#67412c] border border-[#e1d0a7] dark:border-[#7a4e2e] text-[#7a4e2e] dark:text-[#e1d0a7] font-medium rounded-lg hover:bg-[#f9f6ed] dark:hover:bg-[#59382a] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 py-3 px-4 bg-[#b28341] hover:bg-[#996936] text-white font-medium rounded-lg transition-colors"
-          >
-            Save Method
-          </button>
-        </div>
+        {/* Footer - Only show Save/Cancel for non-card payments */}
+        {selectedMethod !== "card" && (
+          <div className="flex gap-3 p-6 bg-[#f9f6ed] dark:bg-[#59382a] border-t border-[#e1d0a7] dark:border-[#7a4e2e]">
+            <button
+              onClick={handleCancel}
+              className="flex-1 py-3 px-4 bg-white dark:bg-[#67412c] border border-[#e1d0a7] dark:border-[#7a4e2e] text-[#7a4e2e] dark:text-[#e1d0a7] font-medium rounded-lg hover:bg-[#f9f6ed] dark:hover:bg-[#59382a] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-1 py-3 px-4 bg-[#b28341] hover:bg-[#996936] text-white font-medium rounded-lg transition-colors"
+            >
+              Save Method
+            </button>
+          </div>
+        )}
+
+        {/* Footer for card payments - Only show Cancel */}
+        {selectedMethod === "card" && (
+          <div className="flex gap-3 p-6 bg-[#f9f6ed] dark:bg-[#59382a] border-t border-[#e1d0a7] dark:border-[#7a4e2e]">
+            <button
+              onClick={handleCancel}
+              className="w-full py-3 px-4 bg-white dark:bg-[#67412c] border border-[#e1d0a7] dark:border-[#7a4e2e] text-[#7a4e2e] dark:text-[#e1d0a7] font-medium rounded-lg hover:bg-[#f9f6ed] dark:hover:bg-[#59382a] transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

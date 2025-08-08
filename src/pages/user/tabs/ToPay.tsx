@@ -1,9 +1,28 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify";
+
+// Components
 import DeliveryAddressModal from "./modal/DeliveryAddressModal";
-import { getProfile } from "../../../services/usersApi";
 import PaymentMethodModal from "./modal/PaymentMethodModal";
 
-// --- useDebounce hook ---
+// Services
+import { getProfile } from "../../../services/usersApi";
+import { getCart, removeFromCart } from "../../../services/cartApi";
+
+// Types
+interface CartItem {
+  id: string;
+  productName: string;
+  price: number;
+  originalPrice?: number;
+  quantity: number;
+  image: string;
+  selected: boolean;
+}
+
+// Custom Hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -16,83 +35,62 @@ function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
   return debouncedValue;
 }
-import { getCart, removeFromCart } from "../../../services/cartApi";
-import { toast } from "react-toastify"; // For user feedback
-
-interface CartItem {
-  id: string;
-  productName: string;
-  price: number;
-  originalPrice?: number;
-  quantity: number;
-  image: string;
-  selected: boolean;
-}
 
 const ToPay: React.FC = () => {
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to Cash on Delivery
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const handlePaymentMethodChange = () => {
-    setIsPaymentModalOpen(true);
-  };
-
-  const handlePaymentMethodSave = (newPaymentMethod: string) => {
-    setPaymentMethod(newPaymentMethod);
-    setIsPaymentModalOpen(false);
-  };
-
-  const handlePaymentModalClose = () => {
-    setIsPaymentModalOpen(false);
-  };
-
-  const getPaymentMethodDisplayName = (method: string) => {
-    switch (method) {
-      case "gcash":
-        return "GCash";
-      case "paymaya":
-        return "PayMaya";
-      case "visa":
-        return "Visa";
-      case "mastercard":
-        return "MasterCard";
-      case "cod":
-      default:
-        return "Cash on Delivery";
-    }
-  };
-  // --- State and hooks: always at the top ---
+  // ========== STATE DECLARATIONS ==========
+  // Loading and error states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]); // Will fetch real data from backend
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+
+  // Cart and search states
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  // Debounced search value for optimized filtering
   const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Payment and delivery states
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [showPaymentModal, setShowPaymentModal] = useState(false); // Added missing state
   const [deliveryAddress, setDeliveryAddress] = useState({
     name: "",
     phone: "",
     address: "",
   });
-  const shippingFee = 120;
+
+  // Modal states
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
-  const handleAddressChange = () => {
-    setIsAddressModalOpen(true);
-  };
+  // Constants
+  const shippingFee = 120;
 
-  const handleAddressSave = (newAddress: {
-    name: string;
-    phone: string;
-    address: string;
-  }) => {
-    setDeliveryAddress(newAddress);
-    setIsAddressModalOpen(false);
-  };
+  // ========== COMPUTED VALUES ==========
+  const filteredCartItems = useMemo(() => {
+    if (!debouncedSearch.trim()) return cartItems;
+    return cartItems.filter((item) =>
+      item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+  }, [cartItems, debouncedSearch]);
 
-  const handleAddressModalClose = () => {
-    setIsAddressModalOpen(false);
-  };
+  const selectedItems = cartItems.filter((item) => item.selected);
+  const merchandiseSubtotal = selectedItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const vatAmount = merchandiseSubtotal * 0.08;
+  const totalPayment =
+    merchandiseSubtotal +
+    vatAmount +
+    (selectedItems.length > 0 ? shippingFee : 0);
+  const hasSelectedItems = selectedItems.length > 0;
 
+  // Calculate total for PaymentMethodModal
+  const grandTotal = totalPayment;
+
+  // ========== EFFECTS ==========
+  // Fetch user profile for delivery address
   useEffect(() => {
     async function fetchAddress() {
       try {
@@ -109,7 +107,7 @@ const ToPay: React.FC = () => {
     fetchAddress();
   }, []);
 
-  // --- Fetch cart from backend on mount ---
+  // Fetch cart from backend
   useEffect(() => {
     const fetchCart = async () => {
       setLoading(true);
@@ -121,15 +119,14 @@ const ToPay: React.FC = () => {
           response.data &&
           Array.isArray(response.data.items)
         ) {
-          // Transform backend cart items to frontend CartItem[]
           const items = response.data.items.map((item: any) => ({
             id: item._id,
-            productId: item.product, // backend product ObjectId
+            productId: item.product,
             productName: item.name,
             price: item.price,
             quantity: item.quantity,
             image: item.image,
-            selected: false, // default: not selected
+            selected: false,
           }));
           setCartItems(items);
         } else {
@@ -144,18 +141,10 @@ const ToPay: React.FC = () => {
       }
     };
     fetchCart();
-  }, []); // Run only on mount
+  }, []);
 
-  // --- Memoized filtered cart items ---
-  // Use debounced search value for optimized filtering
-  const filteredCartItems = useMemo(() => {
-    if (!debouncedSearch.trim()) return cartItems;
-    return cartItems.filter((item) =>
-      item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())
-    );
-  }, [cartItems, debouncedSearch]);
-
-  // --- Cart handlers ---
+  // ========== EVENT HANDLERS ==========
+  // Cart item handlers
   const handleQuantityChange = (id: string, change: number) => {
     setCartItems((items) =>
       items.map((item) =>
@@ -178,7 +167,6 @@ const ToPay: React.FC = () => {
     const allSelected = filteredCartItems.every((item) => item.selected);
     setCartItems((items) =>
       items.map((item) => {
-        // Only toggle items that are currently visible (filtered)
         const isVisible = filteredCartItems.some(
           (filtered) => filtered.id === item.id
         );
@@ -187,8 +175,6 @@ const ToPay: React.FC = () => {
     );
   };
 
-  // Remove item from cart (backend + frontend)
-  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const handleRemoveItem = async (id: string) => {
     setRemovingItemId(id);
     try {
@@ -202,20 +188,146 @@ const ToPay: React.FC = () => {
     }
   };
 
-  // --- Derived values ---
-  const selectedItems = cartItems.filter((item) => item.selected);
-  const merchandiseSubtotal = selectedItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const vatAmount = merchandiseSubtotal * 0.08;
-  const totalPayment =
-    merchandiseSubtotal +
-    vatAmount +
-    (selectedItems.length > 0 ? shippingFee : 0);
-  const hasSelectedItems = selectedItems.length > 0;
+  // Address handlers
+  const handleAddressChange = () => {
+    setIsAddressModalOpen(true);
+  };
 
-  // --- Main return: render loading, error, empty, or cart UI ---
+  const handleAddressSave = (newAddress: {
+    name: string;
+    phone: string;
+    address: string;
+  }) => {
+    setDeliveryAddress(newAddress);
+    setIsAddressModalOpen(false);
+  };
+
+  const handleAddressModalClose = () => {
+    setIsAddressModalOpen(false);
+  };
+
+  // Payment method handlers
+  const handlePaymentMethodChange = (method: string) => {
+    setPaymentMethod(method);
+    if (method === "card") {
+      setShowPaymentModal(true);
+    }
+  };
+
+  const handlePaymentMethodSave = (newPaymentMethod: string) => {
+    setPaymentMethod(newPaymentMethod);
+    setShowPaymentModal(false);
+  };
+
+  const handlePaymentModalClose = () => {
+    setShowPaymentModal(false);
+  };
+
+  // Handle successful card payment
+  const handleCardPaymentSuccess = async (paymentData: any) => {
+    try {
+      const orderData = {
+        items: selectedItems,
+        total: grandTotal,
+        vat: vatAmount,
+        shipping: shippingFee,
+        paymentMethod: "card",
+        paymentIntentId: paymentData.paymentIntentId,
+        deliveryAddress,
+      };
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/orders`,
+        orderData,
+        { withCredentials: true }
+      );
+      toast.success("Order placed successfully!");
+      navigate("/userpanel");
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast.error("Failed to place order. Please try again.");
+    }
+  };
+
+  // Place order handler
+  const handlePlaceOrder = async () => {
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+    if (!deliveryAddress.address) {
+      toast.error("Please provide a delivery address");
+      return;
+    }
+    if (selectedItems.length === 0) {
+      toast.error("Please select at least one item to order");
+      return;
+    }
+
+    if (paymentMethod === "card") {
+      setShowPaymentModal(true);
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    try {
+      if (paymentMethod === "gcash" || paymentMethod === "grab_pay") {
+        const amount = Math.round(grandTotal * 100); // Convert to centavos
+        const res = await axios.post(
+          `${import.meta.env.VITE_API_URL}/payment/source`,
+          {
+            amount,
+            currency: "PHP",
+            type: paymentMethod,
+            redirectUrl: `${window.location.origin}/payment-success`,
+          },
+          { withCredentials: true }
+        );
+        const checkOutUrl = res.data.data.attributes.redirect.checkout_url;
+        window.location.href = checkOutUrl;
+      } else if (paymentMethod === "cod") {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/payment/create`,
+          {
+            selectedItems,
+            deliveryAddress,
+            paymentMethod: "cod",
+          },
+          { withCredentials: true }
+        );
+        toast.success("Order placed successfully! (COD)");
+        navigate("/userpanel");
+      }
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.error?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Payment Failed"
+      );
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
+  // ========== UTILITY FUNCTIONS ==========
+  const getPaymentMethodDisplayName = (method: string) => {
+    switch (method) {
+      case "gcash":
+        return "GCash";
+      case "grab_pay":
+        return "GrabPay";
+      case "visa":
+        return "Visa";
+      case "card":
+        return "Credit/Debit Card";
+      case "cod":
+      default:
+        return "Cash on Delivery";
+    }
+  };
+
+  // ========== RENDER CONDITIONS ==========
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#f9f6ed] dark:bg-[#59382a]">
@@ -225,6 +337,7 @@ const ToPay: React.FC = () => {
       </div>
     );
   }
+
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#f9f6ed] dark:bg-[#59382a]">
@@ -232,6 +345,7 @@ const ToPay: React.FC = () => {
       </div>
     );
   }
+
   if (cartItems.length === 0) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#f9f6ed] dark:bg-[#59382a]">
@@ -247,6 +361,7 @@ const ToPay: React.FC = () => {
     );
   }
 
+  // ========== MAIN RENDER ==========
   return (
     <div className="bg-[#f9f6ed] dark:bg-[#59382a] flex flex-col min-h-0 flex-1">
       {/* Search Bar */}
@@ -406,9 +521,10 @@ const ToPay: React.FC = () => {
                           <div className="col-span-1 text-center">
                             <button
                               onClick={() => handleRemoveItem(item.id)}
-                              className="cursor-pointer text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors"
+                              disabled={removingItemId === item.id}
+                              className="cursor-pointer text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors disabled:opacity-50"
                             >
-                              Delete
+                              {removingItemId === item.id ? "..." : "Delete"}
                             </button>
                           </div>
                         </div>
@@ -434,9 +550,6 @@ const ToPay: React.FC = () => {
                         Select All ({filteredCartItems.length})
                       </span>
                     </label>
-                    <button className="text-[#996936] dark:text-[#d0b274] text-sm hover:text-[#7a4e2e] dark:hover:text-[#e1d0a7] transition-colors">
-                      Delete
-                    </button>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
@@ -453,7 +566,7 @@ const ToPay: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Side - Order Summary (Only show when items are selected) */}
+            {/* Right Side - Order Summary */}
             {hasSelectedItems && (
               <div className="flex flex-col h-full space-y-3 min-h-0">
                 {/* Delivery Address */}
@@ -490,6 +603,24 @@ const ToPay: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Payment Method */}
+                <div className="bg-white dark:bg-[#67412c] rounded-lg border border-[#e1d0a7] dark:border-[#7a4e2e] p-4 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[#7a4e2e] dark:text-[#e1d0a7] font-semibold">
+                      Payment Method
+                    </h3>
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      className="text-[#b28341] text-sm font-medium hover:text-[#996936] transition-colors"
+                    >
+                      CHANGE
+                    </button>
+                  </div>
+                  <div className="mt-2 text-[#59382a] dark:text-[#f9f6ed] text-sm">
+                    {getPaymentMethodDisplayName(paymentMethod)}
+                  </div>
+                </div>
+
                 {/* Payment Summary */}
                 <div className="bg-white dark:bg-[#67412c] rounded-lg border border-[#e1d0a7] dark:border-[#7a4e2e] p-4 flex-shrink-0">
                   <h3 className="text-[#7a4e2e] dark:text-[#e1d0a7] font-semibold mb-4">
@@ -502,7 +633,7 @@ const ToPay: React.FC = () => {
                         Merchandise Subtotal:
                       </span>
                       <span className="text-[#59382a] dark:text-[#f9f6ed]">
-                        ₱{merchandiseSubtotal}
+                        ₱{merchandiseSubtotal.toFixed(2)}
                       </span>
                     </div>
 
@@ -536,45 +667,36 @@ const ToPay: React.FC = () => {
                     </div>
                   </div>
 
-                  <button className="w-full mt-4 py-3 px-4 bg-[#b28341] hover:bg-[#996936] text-white font-semibold rounded-lg transition-colors duration-200">
-                    Place Order
+                  <button
+                    onClick={handlePlaceOrder}
+                    disabled={isPlacingOrder}
+                    className="w-full mt-4 py-3 px-4 bg-[#b28341] hover:bg-[#996936] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors duration-200"
+                  >
+                    {isPlacingOrder ? "Processing..." : "Place Order"}
                   </button>
-                </div>
-
-                {/* Payment Method */}
-                <div className="bg-white dark:bg-[#67412c] rounded-lg border border-[#e1d0a7] dark:border-[#7a4e2e] p-4 flex-shrink-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[#7a4e2e] dark:text-[#e1d0a7] font-semibold">
-                      Payment Method
-                    </h3>
-                    <button
-                      onClick={handlePaymentMethodChange}
-                      className="text-[#b28341] text-sm font-medium hover:text-[#996936] transition-colors"
-                    >
-                      CHANGE
-                    </button>
-                  </div>
-                  <div className="mt-2 text-[#59382a] dark:text-[#f9f6ed] text-sm">
-                    {getPaymentMethodDisplayName(paymentMethod)}
-                  </div>
                 </div>
               </div>
             )}
-            <DeliveryAddressModal
-              isOpen={isAddressModalOpen}
-              onClose={handleAddressModalClose}
-              currentAddress={deliveryAddress}
-              onSave={handleAddressSave}
-            />
-            <PaymentMethodModal
-              isOpen={isPaymentModalOpen}
-              onClose={handlePaymentModalClose}
-              currentPaymentMethod={paymentMethod}
-              onSave={handlePaymentMethodSave}
-            />
           </div>
         </div>
       </div>
+
+      {/* ========== MODALS ========== */}
+      <DeliveryAddressModal
+        isOpen={isAddressModalOpen}
+        onClose={handleAddressModalClose}
+        currentAddress={deliveryAddress}
+        onSave={handleAddressSave}
+      />
+
+      <PaymentMethodModal
+        isOpen={showPaymentModal}
+        onClose={handlePaymentModalClose}
+        currentPaymentMethod={paymentMethod}
+        onSave={handlePaymentMethodChange}
+        totalAmount={grandTotal}
+        onSuccess={handleCardPaymentSuccess}
+      />
     </div>
   );
 };
