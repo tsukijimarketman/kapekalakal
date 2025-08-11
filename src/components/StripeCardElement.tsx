@@ -108,7 +108,7 @@ export const StripeCardElement = ({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 bg-white dark:bg-[#67412c] border border-[#e1d0a7] dark:border-[#7a4e2e] text-[#7a4e2e] dark:text-[#e1d0a7] py-2 px-4 rounded-md hover:bg-[#f9f6ed] dark:hover:bg-[#59382a] transition-colors"
+          className="flex-1 bg-white dark:bg-[#67412c] border border-[#e1d0a7] dark:border-[#7a4e2e] text-[#7a4e2e] dark:text-white py-2 px-4 rounded-md hover:bg-[#f9f6ed] dark:hover:bg-[#59382a] transition-colors"
           disabled={isProcessing}
         >
           Cancel
@@ -116,7 +116,7 @@ export const StripeCardElement = ({
         <button
           type="submit"
           disabled={isProcessing || isDisabled || !stripe} // Added validation states
-          className={`flex-1 bg-[#b28341] text-white py-2 px-4 rounded-md hover:bg-[#996936] ${
+          className={`cursor-pointer flex-1 bg-[#b28341] text-white py-2 px-4 rounded-md hover:bg-[#996936] ${
             isProcessing || isDisabled || !stripe
               ? "opacity-50 cursor-not-allowed"
               : ""

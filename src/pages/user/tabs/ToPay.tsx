@@ -736,7 +736,7 @@ const ToPay: React.FC = () => {
                   <button
                     onClick={handlePlaceOrder}
                     disabled={isPlacingOrder}
-                    className="w-full mt-4 py-3 px-4 bg-[#b28341] hover:bg-[#996936] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors duration-200"
+                    className="cursor-pointer w-full mt-4 py-3 px-4 bg-[#b28341] hover:bg-[#996936] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors duration-200"
                   >
                     {isPlacingOrder ? "Processing..." : "Place Order"}
                   </button>
