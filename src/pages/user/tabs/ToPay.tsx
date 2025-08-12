@@ -54,10 +54,18 @@ const ToPay: React.FC = () => {
   // Payment and delivery states
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [showPaymentModal, setShowPaymentModal] = useState(false); // Added missing state
-  const [deliveryAddress, setDeliveryAddress] = useState({
+  const [deliveryAddress, setDeliveryAddress] = useState<{
+    name: string;
+    phone: string;
+    address: string;
+    latitude?: number;
+    longitude?: number;
+  }>({
     name: "",
     phone: "",
     address: "",
+    latitude: 0,
+    longitude: 0,
   });
 
   // Modal states
@@ -99,6 +107,8 @@ const ToPay: React.FC = () => {
           name: `${user.firstName} ${user.lastName}`,
           phone: user.contactNumber || "",
           address: user.address || "",
+          latitude: user.latitude || 0,
+          longitude: user.longitude || 0,
         });
       } catch (error) {
         console.error("Failed to fetch user profile", error);
@@ -197,6 +207,8 @@ const ToPay: React.FC = () => {
     name: string;
     phone: string;
     address: string;
+    latitude?: number;
+    longitude?: number;
   }) => {
     setDeliveryAddress(newAddress);
     setIsAddressModalOpen(false);
@@ -242,6 +254,8 @@ const ToPay: React.FC = () => {
         paymentMethod: "Stripe",
         paymentIntentId: paymentData.paymentIntentId,
         shippingAddress: deliveryAddress.address.trim(),
+        latitude: deliveryAddress.latitude,
+        longitude: deliveryAddress.longitude,
       };
 
       const response = await axios.post(
@@ -293,6 +307,8 @@ const ToPay: React.FC = () => {
         sourceId,
         items: itemsPayload,
         shippingAddress: deliveryAddress?.address || "",
+        latitude: deliveryAddress?.latitude || 0,
+        longitude: deliveryAddress?.longitude || 0,
       };
       localStorage.setItem("checkoutPayload", JSON.stringify(checkoutPayload));
 
@@ -308,6 +324,10 @@ const ToPay: React.FC = () => {
   const handlePlaceOrder = async () => {
     if (!paymentMethod) {
       toast.error("Please select a payment method");
+      return;
+    }
+    if (deliveryAddress.latitude == null || deliveryAddress.longitude == null) {
+      toast.error("Please pin your delivery location on the map");
       return;
     }
     if (!deliveryAddress.address) {

@@ -3,7 +3,6 @@ import {
   MapPin,
   Package,
   Camera,
-  Navigation,
   Clock,
   DollarSign,
   Truck,
@@ -14,6 +13,7 @@ import {
   Sun,
   BarChart3,
 } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface Task {
   id: string;
@@ -52,6 +52,7 @@ const DeliveryRiderDashboard: React.FC = () => {
 
   const pickupFileRef = useRef<HTMLInputElement>(null);
   const deliveryFileRef = useRef<HTMLInputElement>(null);
+  const { signout } = useAuth();
 
   const [tasks] = useState<Task[]>([
     {
@@ -339,7 +340,7 @@ const DeliveryRiderDashboard: React.FC = () => {
       ))}
       <div
         className="flex items-center gap-3 p-4 cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600"
-        onClick={() => alert("Signing out...")}
+        onClick={signout}
       >
         <LogOut className="w-5 h-5" />
         <span>Sign Out</span>

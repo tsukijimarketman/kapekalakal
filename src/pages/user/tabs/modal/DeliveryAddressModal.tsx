@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 
 interface DeliveryAddress {
   name: string;
   phone: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
 }
+
+// Additionally create an explicit default icon for safety across bundlers
+const defaultIcon = L.icon({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 interface DeliveryAddressModalProps {
   isOpen: boolean;
@@ -33,6 +57,27 @@ const DeliveryAddressModal: React.FC<DeliveryAddressModalProps> = ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleMapClick = (lat: number, lng: number) => {
+    setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }));
+  };
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFormData((prev) => ({ ...prev, latitude, longitude }));
+      },
+      (err) => {
+        console.error(err);
+        toast.error("Unable to retrieve your location");
+      }
+    );
   };
 
   // Handle save
@@ -68,6 +113,23 @@ const DeliveryAddressModal: React.FC<DeliveryAddressModalProps> = ({
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  const defaultCenter: [number, number] = [14.599512, 120.984222]; // Manila
+  const hasPin =
+    typeof formData.latitude === "number" &&
+    typeof formData.longitude === "number";
+  const center: [number, number] = hasPin
+    ? [formData.latitude as number, formData.longitude as number]
+    : defaultCenter;
+
+  const MapClickHandler: React.FC<{
+    onPick: (lat: number, lng: number) => void;
+  }> = ({ onPick }) => {
+    useMapEvents({
+      click: (e) => onPick(e.latlng.lat, e.latlng.lng),
+    });
+    return null;
+  };
 
   if (!isOpen) return null;
 
@@ -159,6 +221,63 @@ const DeliveryAddressModal: React.FC<DeliveryAddressModalProps> = ({
               className="w-full px-4 py-3 bg-[#f9f6ed] dark:bg-[#59382a] border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-lg text-[#59382a] dark:text-[#f9f6ed] placeholder-[#996936] dark:placeholder-[#d0b274] focus:outline-none focus:ring-2 focus:ring-[#b28341] focus:border-transparent transition-colors resize-none"
               placeholder="Street, Barangay, City, Province, Postal Code"
             />
+          </div>
+
+          {/* Map Picker */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-[#7a4e2e] dark:text-[#e1d0a7]">
+                Pin Delivery Location
+              </label>
+              <button
+                type="button"
+                className="text-xs px-3 py-1 rounded-md bg-[#b28341] text-white hover:bg-[#996936]"
+                onClick={handleUseMyLocation}
+              >
+                Use my location
+              </button>
+            </div>
+            <div className="rounded-lg overflow-hidden border border-[#e1d0a7] dark:border-[#7a4e2e]">
+              <MapContainer
+                center={center}
+                zoom={13}
+                style={{ height: 300, width: "100%" }}
+                scrollWheelZoom
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapClickHandler onPick={handleMapClick} />
+                {hasPin && (
+                  <Marker
+                    position={[
+                      formData.latitude as number,
+                      formData.longitude as number,
+                    ]}
+                    icon={defaultIcon}
+                    draggable
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const m = e.target as L.Marker;
+                        const { lat, lng } = m.getLatLng();
+                        handleMapClick(lat, lng);
+                      },
+                    }}
+                  />
+                )}
+              </MapContainer>
+            </div>
+            <div className="mt-2 text-xs text-[#996936] dark:text-[#d0b274]">
+              {hasPin ? (
+                <span>
+                  Selected: {formData.latitude?.toFixed(6)},{" "}
+                  {formData.longitude?.toFixed(6)}
+                </span>
+              ) : (
+                <span>Tap on the map to select your location.</span>
+              )}
+            </div>
           </div>
         </div>
 
