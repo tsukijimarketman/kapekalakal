@@ -30,7 +30,7 @@ const PaymentSuccess: React.FC = () => {
         const raw = localStorage.getItem("checkoutPayload");
         if (!raw) return;
         const payload = JSON.parse(raw);
-        const { provider, sourceId, items, shippingAddress } = payload || {};
+        const { provider, sourceId, items, shippingAddress, latitude, longitude } = payload || {};
         if (!sourceId || !["gcash", "grab_pay"].includes(provider)) return;
 
         // Prevent duplicate submissions
@@ -38,7 +38,7 @@ const PaymentSuccess: React.FC = () => {
 
         await axios.post(
           `${import.meta.env.VITE_API_URL}/payment/confirm`,
-          { sourceId, items, shippingAddress },
+          { sourceId, items, shippingAddress, latitude, longitude },
           { withCredentials: true }
         );
         // Success: nothing else to do; this page already shows success and will redirect.

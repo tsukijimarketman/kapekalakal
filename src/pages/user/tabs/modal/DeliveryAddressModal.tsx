@@ -114,7 +114,7 @@ const DeliveryAddressModal: React.FC<DeliveryAddressModalProps> = ({
     };
   }, [isOpen]);
 
-  const defaultCenter: [number, number] = [14.599512, 120.984222]; // Manila
+  const defaultCenter: [number, number] = [14.554729, 121.024445]; // Makati
   const hasPin =
     typeof formData.latitude === "number" &&
     typeof formData.longitude === "number";

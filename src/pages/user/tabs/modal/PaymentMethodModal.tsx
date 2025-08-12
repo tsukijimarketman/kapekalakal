@@ -47,8 +47,8 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
       ),
     },
     {
-      id: "card", // Visa as card payment method
-      name: "Visa",
+      id: "card",
+      name: "Card",
       icon: (
         <div className="w-8 h-8 rounded-lg flex items-center justify-center">
           <img src={Visa} alt="Visa" />

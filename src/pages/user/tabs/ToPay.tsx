@@ -64,8 +64,8 @@ const ToPay: React.FC = () => {
     name: "",
     phone: "",
     address: "",
-    latitude: 0,
-    longitude: 0,
+    latitude: undefined,
+    longitude: undefined,
   });
 
   // Modal states
@@ -107,8 +107,8 @@ const ToPay: React.FC = () => {
           name: `${user.firstName} ${user.lastName}`,
           phone: user.contactNumber || "",
           address: user.address || "",
-          latitude: user.latitude || 0,
-          longitude: user.longitude || 0,
+          latitude: user.latitude || undefined,
+          longitude: user.longitude || undefined,
         });
       } catch (error) {
         console.error("Failed to fetch user profile", error);
@@ -366,6 +366,12 @@ const ToPay: React.FC = () => {
             currency: "PHP",
             type: paymentMethod,
             redirectUrl: `${window.location.origin}/payment-success`,
+            metadata: {
+              items: JSON.stringify(selectedItems),
+              shippingAddress: deliveryAddress?.address || "",
+              latitude: deliveryAddress?.latitude || 0,
+              longitude: deliveryAddress?.longitude || 0,
+            },
           },
           { withCredentials: true }
         );
@@ -403,8 +409,6 @@ const ToPay: React.FC = () => {
         return "GCash";
       case "grab_pay":
         return "GrabPay";
-      case "visa":
-        return "Visa";
       case "card":
         return "Credit/Debit Card";
       case "cod":
