@@ -3,6 +3,22 @@ import { Truck, Camera, Navigation } from "lucide-react";
 import TaskCard from "../shared/TaskCard";
 import FileUploadArea from "../shared/FileUploadArea";
 import type { Task, DeliveryState, UploadedFile } from "../types/rider";
+import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+const defaultIcon = L.icon({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 interface ActiveDeliverySectionProps {
   activeTask: Task;
@@ -29,10 +45,25 @@ const ActiveDeliverySection: React.FC<ActiveDeliverySectionProps> = ({
   const pickupFileRef = useRef<HTMLInputElement>(null);
   const deliveryFileRef = useRef<HTMLInputElement>(null);
 
+  const hasPin =
+    typeof activeTask.latitude === "number" &&
+    typeof activeTask.longitude === "number" &&
+    Math.abs(activeTask.latitude) > 0 &&
+    Math.abs(activeTask.longitude) > 0;
+
   const openInGoogleMaps = () => {
-    const destination = encodeURIComponent(activeTask.address);
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-    window.open(googleMapsUrl, "_blank");
+    if (hasPin) {
+      window.open(
+        `https://www.google.com/maps/search/?api=1&query=${activeTask.latitude},${activeTask.longitude}`,
+        "_blank"
+      );
+    } else {
+      const destination = encodeURIComponent(activeTask.address);
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+        "_blank"
+      );
+    }
   };
 
   return (
@@ -48,13 +79,36 @@ const ActiveDeliverySection: React.FC<ActiveDeliverySectionProps> = ({
           <TaskCard task={activeTask} showActions={false} />
 
           {/* Map */}
-          <div className="bg-[#e1d0a7] dark:bg-[#7a4e2e] h-32 sm:h-48 rounded-lg flex items-center justify-center mb-4">
-            <div className="text-center">
-              <Navigation className="w-8 h-8 sm:w-12 sm:h-12 text-[#b28341] mx-auto mb-2" />
-              <p className="text-sm sm:text-base text-[#996936] dark:text-[#e1d0a7]">
-                Route map will be displayed here
-              </p>
-            </div>
+          <div className="mb-4 rounded-lg overflow-hidden border border-[#e1d0a7] dark:border-[#7a4e2e] z-5">
+            {hasPin ? (
+              <MapContainer
+                className="z-5"
+                center={[activeTask.latitude!, activeTask.longitude!]}
+                zoom={15}
+                style={{ height: 200, width: "100%" }}
+                scrollWheelZoom={false}
+                dragging={false}
+                doubleClickZoom={false}
+                zoomControl={false}
+                attributionControl={false}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker
+                  position={[activeTask.latitude!, activeTask.longitude!]}
+                  icon={defaultIcon}
+                  draggable={false}
+                />
+              </MapContainer>
+            ) : (
+              <div className="bg-[#e1d0a7] dark:bg-[#7a4e2e] h-32 sm:h-48 flex items-center justify-center">
+                <span className="text-[#996936] dark:text-[#e1d0a7]">
+                  No map location
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -77,8 +131,8 @@ const ActiveDeliverySection: React.FC<ActiveDeliverySectionProps> = ({
         </div>
       </div>
 
-      {/* Pickup Upload Section */}
-      {currentDeliveryState !== "accepted" && (
+      {/* Pickup Upload Section (only when rider has marked as picked up, before submit) */}
+      {currentDeliveryState === "picked-up" && (
         <div className="bg-white dark:bg-[#67412c] rounded-xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-4">
             <h2 className="text-lg font-bold flex items-center gap-2">

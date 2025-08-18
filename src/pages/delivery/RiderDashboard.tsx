@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import type { ActiveSection, DeliveryState, UploadedFile } from "./types/rider";
+import type {
+  ActiveSection,
+  DeliveryState,
+  UploadedFile,
+  Task,
+} from "./types/rider";
 import { useRiderData } from "./hooks/useRiderData";
+import deliveryApi from "../../services/deliveryApi";
 
 import RiderHeader from "./RiderHeader";
 import RiderNavigation from "./RiderNavigation";
@@ -20,9 +26,12 @@ const RiderDashboard: React.FC = () => {
   const [currentDeliveryState, setCurrentDeliveryState] =
     useState<DeliveryState>("accepted");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [activeTaskOverride, setActiveTaskOverride] = useState<Task | null>(
+    null
+  );
 
   const { signout } = useAuth();
-  const { tasks, activeTask, history, stats } = useRiderData();
+  const { activeTask, history, stats } = useRiderData();
 
   useEffect(() => {
     if (isDarkMode) {
@@ -54,31 +63,90 @@ const RiderDashboard: React.FC = () => {
     }
   };
 
-  const acceptTask = (taskId: string) => {
+  const acceptTask = async (taskId: string) => {
     toast.success(`Task ${taskId} accepted! Redirecting to active delivery...`);
+    try {
+      const { data } = await deliveryApi.getMyTasks();
+      const list: any[] = data?.data || [];
+      const t =
+        list.find((x) => x.transactionId === taskId || x._id === taskId) ||
+        list.find((x) => x.status === "in_transit");
+      if (t) {
+        const itemsSummary = Array.isArray(t.items)
+          ? t.items.map((it: any) => `${it.quantity}x ${it.name}`).join(", ")
+          : "—";
+        const mapped: Task = {
+          dbId: t._id,
+          id: t.transactionId || t._id || "N/A",
+          items: Array.isArray(t.items)
+            ? t.items.map((it: any) => `${it.quantity}x ${it.name}`).join(", ")
+            : "—",
+          amount: t.totalAmount ?? 0,
+          distance: "—", // You may compute this if you have rider location
+          fee: 50,
+          address: t.shippingAddress ?? "—",
+          customer: t.customerId
+            ? [t.customerId.firstName, t.customerId.lastName]
+                .filter(Boolean)
+                .join(" ")
+            : undefined,
+          phone: t.customerId?.contactNumber,
+          latitude: t.deliveryInfo?.latitude,
+          longitude: t.deliveryInfo?.longitude,
+          status: "accepted",
+        };
+        setActiveTaskOverride(mapped);
+      }
+    } catch (e) {
+      // Non-blocking; still navigate
+    }
     setActiveSection("active");
   };
 
-  const handlePickupSubmit = () => {
-    if (uploadedFiles.find((f) => f.type === "pickup")) {
-      toast.success("Pickup proof submitted! Waiting for admin approval...");
-      setCurrentDeliveryState("picked-up");
-      // Simulate admin approval after 3 seconds
-      setTimeout(() => {
-        toast.success("Pickup approved! You can now deliver the order.");
-        setCurrentDeliveryState("ready-to-deliver");
-      }, 3000);
+  const handlePickupSubmit = async () => {
+    const currentActive = activeTaskOverride || activeTask;
+    if (!currentActive?.dbId) {
+      toast.error("No active task found.");
+      return;
+    }
+    const file = uploadedFiles.find((f) => f.type === "pickup")?.file;
+    if (!file) {
+      toast.error("Please upload a pickup photo first.");
+      return;
+    }
+    try {
+      await deliveryApi.completePickup(currentActive.dbId, file);
+      toast.success("Pickup proof uploaded! Waiting for admin validation...");
+      // Allow rider to proceed with delivery steps; admin validation happens in backoffice
+      setCurrentDeliveryState("ready-to-deliver");
+    } catch (err: unknown) {
+      type AxiosErrorLike = { response?: { data?: { message?: string } } };
+      const possible = err as AxiosErrorLike;
+      const msg = possible.response?.data?.message || "Failed to submit pickup proof";
+      toast.error(msg);
     }
   };
 
-  const handleDeliverySubmit = () => {
-    if (uploadedFiles.find((f) => f.type === "delivery")) {
-      toast.success("Delivery completed! Waiting for admin validation...");
-      // Simulate admin validation
-      setTimeout(() => {
-        toast.success("Delivery validated successfully! Order completed.");
-        setActiveSection("history");
-      }, 2000);
+  const handleDeliverySubmit = async () => {
+    const currentActive = activeTaskOverride || activeTask;
+    if (!currentActive?.dbId) {
+      toast.error("No active task found.");
+      return;
+    }
+    const file = uploadedFiles.find((f) => f.type === "delivery")?.file;
+    if (!file) {
+      toast.error("Please upload a delivery photo first.");
+      return;
+    }
+    try {
+      await deliveryApi.completeDelivery(currentActive.dbId, file);
+      toast.success("Delivery proof uploaded! Waiting for admin validation...");
+      // Do not auto-complete; admin will validate in backoffice
+    } catch (err: unknown) {
+      type AxiosErrorLike = { response?: { data?: { message?: string } } };
+      const possible = err as AxiosErrorLike;
+      const msg = possible.response?.data?.message || "Failed to submit delivery proof";
+      toast.error(msg);
     }
   };
 
@@ -91,19 +159,31 @@ const RiderDashboard: React.FC = () => {
       case "dashboard":
         return <DashboardSection stats={stats} history={history} />;
       case "tasks":
-        return <TasksSection tasks={tasks} onAcceptTask={acceptTask} />;
+        return <TasksSection onAcceptTask={acceptTask} />;
       case "active":
-        return (
-          <ActiveDeliverySection
-            activeTask={activeTask}
-            currentDeliveryState={currentDeliveryState}
-            setCurrentDeliveryState={setCurrentDeliveryState}
-            uploadedFiles={uploadedFiles}
-            onFileUpload={handleFileUpload}
-            onPickupSubmit={handlePickupSubmit}
-            onDeliverySubmit={handleDeliverySubmit}
-          />
-        );
+        {
+          const currentActive = activeTaskOverride || activeTask;
+          if (!currentActive) {
+            return (
+              <div className="bg-white dark:bg-[#67412c] rounded-xl shadow p-6 text-center animate-fade-in">
+                <p className="text-sm sm:text-base opacity-80">
+                  No active delivery yet. Go to the Tasks tab to accept a delivery.
+                </p>
+              </div>
+            );
+          }
+          return (
+            <ActiveDeliverySection
+              activeTask={currentActive}
+              currentDeliveryState={currentDeliveryState}
+              setCurrentDeliveryState={setCurrentDeliveryState}
+              uploadedFiles={uploadedFiles}
+              onFileUpload={handleFileUpload}
+              onPickupSubmit={handlePickupSubmit}
+              onDeliverySubmit={handleDeliverySubmit}
+            />
+          );
+        }
       case "history":
         return <HistorySection history={history} />;
       case "profile":

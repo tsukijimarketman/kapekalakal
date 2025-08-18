@@ -69,7 +69,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     {showActions && onAccept && (
       <button
         onClick={onAccept}
-        className="w-full bg-gradient-to-r from-[#b28341] to-[#996936] hover:from-[#996936] hover:to-[#7a4e2e] text-white py-3 rounded-lg font-bold transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-lg"
+        className="cursor-pointer w-full bg-gradient-to-r from-[#b28341] to-[#996936] hover:from-[#996936] hover:to-[#7a4e2e] text-white py-3 rounded-lg font-bold transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-lg"
       >
         Accept Task
       </button>

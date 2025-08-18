@@ -13,8 +13,8 @@ interface DashboardSectionProps {
 }
 
 const DashboardSection: React.FC<DashboardSectionProps> = ({
-  stats,
-  history,
+  stats = { todayDeliveries: 0, todayEarnings: 0, totalDeliveries: 0 },
+  history = [],
 }) => {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -22,18 +22,18 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           icon={<Package />}
-          number={stats.todayDeliveries.toString()}
+          number={String(stats?.todayDeliveries ?? 0)}
           label="Today's Deliveries"
         />
         <StatCard
           icon={<DollarSign />}
-          number={`₱${stats.todayEarnings.toLocaleString()}`}
+          number={`₱${(stats?.todayEarnings ?? 0).toLocaleString()}`}
           label="Today's Earnings"
         />
         <div className="col-span-2 lg:col-span-1">
           <StatCard
             icon={<Truck />}
-            number={stats.totalDeliveries.toString()}
+            number={String(stats?.totalDeliveries ?? 0)}
             label="Total Deliveries"
           />
         </div>

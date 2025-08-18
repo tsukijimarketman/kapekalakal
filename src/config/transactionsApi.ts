@@ -219,10 +219,11 @@ export const getTransactionById = async (
   transactionId: string
 ): Promise<Transaction> => {
   try {
-    console.log("Fetching transaction by ID:", transactionId);
-
     const response = await fetchWithCredentials(
-      `${API_BASE_URL}/transactions/${transactionId}`
+      `${API_BASE_URL}/transactions/${transactionId}`,
+      {
+        method: "GET",
+      }
     );
 
     if (!response.ok) {
@@ -230,11 +231,60 @@ export const getTransactionById = async (
       throw new Error(errorData.message || "Failed to fetch transaction");
     }
 
-    const result: TransactionResponse = await response.json();
-    console.log("Transaction fetched successfully:", result.data.transactionId);
-    return result.data;
+    const data: TransactionResponse = await response.json();
+    return data.data;
   } catch (error) {
-    console.error("Get transaction by ID error:", error);
+    console.error("Error fetching transaction:", error);
+    throw error;
+  }
+};
+
+// VALIDATE PICKUP - Admin validates pickup photo
+export const validatePickupPhoto = async (
+  transactionId: string
+): Promise<Transaction> => {
+  try {
+    const response = await fetchWithCredentials(
+      `${API_BASE_URL}/transactions/${transactionId}/validate-pickup`,
+      {
+        method: "PUT",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to validate pickup");
+    }
+
+    const data: TransactionResponse = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Error validating pickup:", error);
+    throw error;
+  }
+};
+
+// VALIDATE DELIVERY - Admin validates delivery photo and completes transaction
+export const validateDeliveryPhoto = async (
+  transactionId: string
+): Promise<Transaction> => {
+  try {
+    const response = await fetchWithCredentials(
+      `${API_BASE_URL}/transactions/${transactionId}/validate-delivery`,
+      {
+        method: "PUT",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to validate delivery");
+    }
+
+    const data: TransactionResponse = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("Error validating delivery:", error);
     throw error;
   }
 };

@@ -1,4 +1,5 @@
 export interface Task {
+  dbId?: string;
   id: string;
   items: string;
   amount: number;
@@ -7,6 +8,8 @@ export interface Task {
   address: string;
   customer?: string;
   phone?: string;
+  latitude?: number;
+  longitude?: number;
   status: "pending" | "accepted" | "picked-up" | "delivered";
 }
 

@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import ProductsManagement from "../admin/product-section/ProductsManagement";
 import UsersManagement from "../admin/user-section/UsersManagement";
+import TransactionsManagement from "./transaction-section/TransactionsManagement";
 
 const AdminDashboard = () => {
   const { signout } = useAuth();
@@ -37,7 +38,7 @@ const AdminDashboard = () => {
   const menuItems = [
     { name: "Users", icon: FaUsers },
     { name: "Products", icon: FaBoxOpen },
-    { name: "Orders", icon: FaShoppingCart },
+    { name: "Transactions", icon: FaShoppingCart },
   ];
 
   const toggleSidebar = () => {
@@ -157,32 +158,7 @@ const AdminDashboard = () => {
 
               {activeItem === "Products" && <ProductsManagement />}
 
-              {activeItem === "Orders" && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold mb-4">Orders Management</h2>
-                  <p>This is the orders section of admin dashboard.</p>
-                  {/* Replace this div with your Orders component */}
-                  <div className="mt-4 p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg">
-                    <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                      Orders Component Goes Here
-                    </p>
-                  </div>
-                  {/* Add more content to test scrolling */}
-                  <div className="space-y-4 mt-8">
-                    {Array.from({ length: 20 }, (_, i) => (
-                      <div
-                        key={i}
-                        className="p-4 bg-[#e1d0a7] dark:bg-[#7a4e2e] rounded-lg"
-                      >
-                        <p className="text-sm text-[#996936] dark:text-[#e1d0a7]">
-                          Sample order item {i + 1} - This is to test the
-                          scrolling functionality
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {activeItem === "Transactions" && <TransactionsManagement />}
             </div>
           </div>
         </div>

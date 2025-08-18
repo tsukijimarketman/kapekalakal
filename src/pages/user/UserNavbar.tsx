@@ -179,55 +179,67 @@ const UserNavbar = () => {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="lg:hidden absolute top-[8.3vh] left-0 w-full bg-white dark:bg-black shadow-md py-4 px-6 flex flex-col gap-4 z-40 animate-slide-down">
-            <Link
-              to="/"
+          <div
+            className="lg:hidden fixed inset-x-0 top-0 bottom-0 z-[45]"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Backdrop below the fixed header */}
+            <div
+              className="absolute inset-x-0 top-[8.3vh] bottom-0 bg-black/40"
               onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
-            >
-              Home
-            </Link>
-            <Link
-              to="/about"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
-            >
-              About
-            </Link>
-            <Link
-              to="/products"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
-            >
-              Products
-            </Link>
-            <Link
-              to="/contact"
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
-            >
-              Contact
-            </Link>
-            <button className="text-sm text-black dark:text-white hover:text-[#b08342] text-left">
-              Sign In
-            </button>
-            <button className="text-sm text-black dark:text-white hover:text-[#b08342] text-left">
-              Sign Up
-            </button>
-            <button
-              onClick={toggleDarkMode}
-              className="text-left text-black dark:text-white hover:text-[#b08342]"
-            >
-              {darkMode ? (
-                <span className="flex items-center gap-2">
-                  <LuMoon /> Dark Mode
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <FiSun /> Light Mode
-                </span>
-              )}
-            </button>
+            />
+            {/* Panel positioned directly below header */}
+            <div className="absolute inset-x-0 top-[8.3vh] bg-white dark:bg-black shadow-md py-4 px-6 flex flex-col gap-4 animate-slide-down">
+              <Link
+                to="/"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
+              >
+                Home
+              </Link>
+              <Link
+                to="/about"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
+              >
+                About
+              </Link>
+              <Link
+                to="/products"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
+              >
+                Products
+              </Link>
+              <Link
+                to="/contact"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-semibold text-black dark:text-white hover:text-[#b08342]"
+              >
+                Contact
+              </Link>
+              <button className="text-sm text-black dark:text-white hover:text-[#b08342] text-left">
+                Sign In
+              </button>
+              <button className="text-sm text-black dark:text-white hover:text-[#b08342] text-left">
+                Sign Up
+              </button>
+              <button
+                onClick={toggleDarkMode}
+                className="text-left text-black dark:text-white hover:text-[#b08342]"
+              >
+                {darkMode ? (
+                  <span className="flex items-center gap-2">
+                    <LuMoon /> Dark Mode
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <FiSun /> Light Mode
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>

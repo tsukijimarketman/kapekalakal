@@ -55,11 +55,14 @@ const ProfilePage = () => {
       const formData = new FormData();
       formData.append("profileImage", file);
 
-      const res = await fetch(`http://localhost:5000/api/user/profile-image`, {
-        method: "PUT",
-        body: formData,
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/user/profile-image`,
+        {
+          method: "PUT",
+          body: formData,
+          credentials: "include",
+        }
+      );
 
       const data = await res.json();
 

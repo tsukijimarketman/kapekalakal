@@ -26,36 +26,53 @@ const RiderNavigation: React.FC<RiderNavigationProps> = ({
   ] as const;
 
   return (
-    <nav
-      className={`${
-        isMenuOpen ? "block" : "hidden"
-      } lg:hidden bg-[#efe8d2] dark:bg-[#67412c] m-4 rounded-xl shadow-lg overflow-hidden`}
-    >
-      {navItems.map(({ id, label, icon: Icon }) => (
+    <>
+      {isMenuOpen && (
         <div
-          key={id}
-          className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
-            activeSection === id
-              ? "bg-[#b28341] text-white"
-              : "hover:bg-[#e1d0a7] dark:hover:bg-[#7a4e2e]"
-          }`}
-          onClick={() => {
-            setActiveSection(id);
-            setIsMenuOpen(false);
+          className="lg:hidden fixed inset-x-0 top-0 bottom-0 z-[70]"
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsMenuOpen(false);
           }}
         >
-          <Icon className="w-5 h-5 flex-shrink-0" />
-          <span className="text-sm md:text-base">{label}</span>
+          {/* Backdrop below the header (approx 64px header height) */}
+          <div
+            className="absolute inset-x-0 top-16 bottom-0 bg-black/40"
+            onClick={() => setIsMenuOpen(false)}
+          />
+
+          {/* Menu panel positioned under the header */}
+          <nav className="absolute inset-x-0 top-16 mx-4 rounded-xl bg-[#efe8d2] dark:bg-[#67412c] shadow-lg overflow-hidden">
+            {navItems.map(({ id, label, icon: Icon }) => (
+              <div
+                key={id}
+                className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
+                  activeSection === id
+                    ? "bg-[#b28341] text-white"
+                    : "hover:bg-[#e1d0a7] dark:hover:bg-[#7a4e2e]"
+                }`}
+                onClick={() => {
+                  setActiveSection(id);
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm md:text-base">{label}</span>
+              </div>
+            ))}
+            <div
+              className="flex items-center gap-3 p-4 cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600"
+              onClick={onSignOut}
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm md:text-base">Sign Out</span>
+            </div>
+          </nav>
         </div>
-      ))}
-      <div
-        className="flex items-center gap-3 p-4 cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600"
-        onClick={onSignOut}
-      >
-        <LogOut className="w-5 h-5 flex-shrink-0" />
-        <span className="text-sm md:text-base">Sign Out</span>
-      </div>
-    </nav>
+      )}
+    </>
   );
 };
 
