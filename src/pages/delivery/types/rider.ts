@@ -6,11 +6,20 @@ export interface Task {
   distance: string;
   fee: number;
   address: string;
-  customer?: string;
+  customer: string;
   phone?: string;
   latitude?: number;
   longitude?: number;
-  status: "pending" | "accepted" | "picked-up" | "delivered";
+  status: 'pending' | 'accepted' | 'picked-up' | 'delivered' | 'in_transit' | 'pickup_completed';
+}
+
+export interface RiderStats {
+  todayDeliveries: number;
+  todayEarnings: number;
+  totalDeliveries: number;
+  totalEarnings: number;
+  lifetimeEarnings?: number; // From backend
+  recentActivity: HistoryItem[];
 }
 
 export interface HistoryItem {

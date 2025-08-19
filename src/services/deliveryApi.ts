@@ -53,6 +53,10 @@ const deliveryApi = {
   // Admin: List all tasks (matches GET /delivery/tasks)
   listAllTasks: (filters = {}) =>
     api.get("/delivery/tasks", { params: filters, withCredentials: true }),
+
+  // List all rider's transactions (matches GET /delivery/transactions)
+  listRiderTransactions: () =>
+    api.get("/delivery/transactions", { withCredentials: true }),
 };
 
 export default deliveryApi;

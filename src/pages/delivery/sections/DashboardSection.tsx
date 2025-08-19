@@ -1,23 +1,19 @@
 import React from "react";
-import { Package, DollarSign, Truck, Clock, TrendingUp } from "lucide-react";
+import { Truck, Clock, TrendingUp } from "lucide-react";
 import StatCard from "../shared/StatCard";
 import type { HistoryItem } from "../types/rider";
 
 interface DashboardSectionProps {
-  stats: {
-    todayDeliveries: number;
-    todayEarnings: number;
-    totalDeliveries: number;
-    totalEarnings: number;
-    recentActivity: HistoryItem[];
+  stats?: {
+    totalDeliveries?: number;
+    lifetimeEarnings?: number;
+    recentActivity?: HistoryItem[];
   };
-  history: HistoryItem[];
+  history?: HistoryItem[];
 }
 
 const DashboardSection: React.FC<DashboardSectionProps> = ({
   stats = {
-    todayDeliveries: 0,
-    todayEarnings: 0,
     totalDeliveries: 0,
     totalEarnings: 0,
     recentActivity: [],
@@ -26,10 +22,8 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
 }) => {
   // Ensure we have safe defaults for stats
   const safeStats = {
-    todayDeliveries: stats?.todayDeliveries ?? 0,
-    todayEarnings: stats?.todayEarnings ?? 0,
     totalDeliveries: stats?.totalDeliveries ?? 0,
-    totalEarnings: stats?.totalEarnings ?? 0,
+    lifetimeEarnings: stats?.lifetimeEarnings ?? 0,
     recentActivity: stats?.recentActivity ?? [],
   };
 
@@ -40,29 +34,42 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
       ? safeStats.recentActivity
       : safeHistory.slice(0, 5);
 
+  // Format currency with proper Philippine Peso symbol and comma separators
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+      .format(amount)
+      .replace("₱", "₱");
+  };
+
+  // Get trend emoji based on value
+  const getTrendEmoji = (value: number) => {
+    if (value > 0) return "↑";
+    if (value < 0) return "↓";
+    return "→";
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          icon={<Package className="text-blue-500" />}
-          number={String(safeStats.todayDeliveries)}
-          label="Today's Deliveries"
-        />
-        <StatCard
-          icon={<DollarSign className="text-green-500" />}
-          number={`₱${safeStats.todayEarnings.toLocaleString()}`}
-          label="Today's Earnings"
-        />
-        <StatCard
-          icon={<Truck className="text-amber-500" />}
-          number={String(safeStats.totalDeliveries)}
+          icon={<Truck className="text-blue-500" />}
+          number={String(safeStats.totalDeliveries || 0)}
           label="Total Deliveries"
+          trend="up"
+          trendValue=""
         />
         <StatCard
           icon={<TrendingUp className="text-purple-500" />}
-          number={`₱${safeStats.totalEarnings.toLocaleString()}`}
+          number={formatCurrency(safeStats.lifetimeEarnings)}
           label="Total Earnings"
+          trend="up"
+          trendValue={`${getTrendEmoji(safeStats.lifetimeEarnings)}`}
         />
       </div>
 

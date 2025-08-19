@@ -1,251 +1,259 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import deliveryApi from "../../../services/deliveryApi";
-import type { Task, HistoryItem } from "../types/rider";
+import type { HistoryItem, Task, RiderStats } from "../types/rider";
 
-// Haversine helpers (KM)
-const toRad = (x: number) => (x * Math.PI) / 180;
-const haversineKm = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-) => {
-  const R = 6371; // km
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-// API response types
-type RecentActivity = {
-  transactionId?: string;
-  _id?: string;
-  updatedAt?: string;
-};
-
-type RiderStatsResponse = {
-  ok: boolean;
-  data: {
-    totalDeliveries: number;
-    todayDeliveries: number;
-    totalEarnings: number;
-    todayEarnings: number;
-    recentActivity: RecentActivity[];
+interface Transaction {
+  _id: string;
+  transactionId: string;
+  status: string;
+  totalAmount: number;
+  deliveryFee: number;
+  shippingAddress: string;
+  items: Array<{ name: string; quantity: number }>;
+  updatedAt: string;
+  statusHistory: Array<{ status: string; timestamp: string }>;
+  customerId?: {
+    firstName?: string;
+    lastName?: string;
+    contactNumber?: string;
   };
-};
+  deliveryInfo?: {
+    latitude: number;
+    longitude: number;
+  };
+}
 
-type ApiTaskItem = { quantity?: number; name?: string };
-type ApiCustomer = {
-  firstName?: string;
-  lastName?: string;
-  contactNumber?: string;
-};
-type ApiTask = {
-  _id?: string;
-  transactionId?: string;
-  items?: ApiTaskItem[];
-  totalAmount?: number;
-  shippingAddress?: string;
-  status?: string;
-  deliveryFee?: number;
-  customerId?: ApiCustomer;
-  deliveryInfo?: { latitude?: number; longitude?: number };
-};
-type MyTasksResponse = { ok: boolean; data: ApiTask[] };
+interface UseRiderDataReturn {
+  stats: RiderStats;
+  history: HistoryItem[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+  activeTask: Task | null;
+}
 
-const MOCK_HISTORY: HistoryItem[] = [
-  {
-    id: "ORD-2024-001",
-    date: "January 15, 2024 - 2:30 PM",
-    items: "2x Americano, 1x Croissant",
-    location: "BGC",
-    fee: 45,
-  },
-  {
-    id: "ORD-2024-002",
-    date: "January 15, 2024 - 11:45 AM",
-    items: "1x Cappuccino, 2x Muffins",
-    location: "Makati",
-    fee: 35,
-  },
-  {
-    id: "ORD-2024-003",
-    date: "January 14, 2024 - 4:15 PM",
-    items: "3x Latte, 1x Sandwich",
-    location: "Ortigas",
-    fee: 55,
-  },
-  {
-    id: "ORD-2024-004",
-    date: "January 14, 2024 - 1:20 PM",
-    items: "4x Espresso, 2x Pastry",
-    location: "Pasig",
-    fee: 65,
-  },
-];
-
-export const useRiderData = () => {
-  // State for dashboard stats (dynamic)
-  const [stats, setStats] = useState({
+export const useRiderData = (): UseRiderDataReturn => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [stats, setStats] = useState<RiderStats>({
     todayDeliveries: 0,
     todayEarnings: 0,
     totalDeliveries: 0,
+    totalEarnings: 0,
+    recentActivity: [],
   });
 
-  // State for dashboard history (dynamic)
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  // Commented out as it's not currently used
+  // const MOCK_HISTORY: HistoryItem[] = [];
 
-  // State for the rider's active task (dynamic)
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  // Calculate history from transactions
+  const { history } = useMemo(() => {
+    const completedTransactions = transactions.filter(
+      (t: Transaction) =>
+        t.status === "completed" || t.status === "delivery_completed"
+    );
 
-  // Loading and error states
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    // Get the most recent status update for each transaction
+    const getLatestStatus = (
+      statusHistory: Array<{ status: string; timestamp: string }>
+    ) => {
+      if (!statusHistory || statusHistory.length === 0) return null;
+      return [...statusHistory].sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )[0];
+    };
 
-  // Fetch rider stats from API
-  const fetchRiderStats = useCallback(async () => {
+    // Map transactions to history items
+    const historyItems: HistoryItem[] = completedTransactions.map(
+      (t: Transaction) => {
+        const latestStatus = getLatestStatus(t.statusHistory);
+        return {
+          id: t.transactionId || t._id,
+          date: latestStatus
+            ? new Date(latestStatus.timestamp).toLocaleString()
+            : "N/A",
+          items: t.items
+            .map(
+              (it: { name: string; quantity: number }) =>
+                `${it.quantity}x ${it.name}`
+            )
+            .join(", "),
+          location: t.shippingAddress,
+          fee: t.deliveryFee,
+        };
+      }
+    );
+
+    return {
+      history: historyItems,
+    };
+  }, [transactions]);
+
+  const fetchRiderData = useCallback(async () => {
     try {
-      setLoading(true);
-      const { data } = await deliveryApi.getRiderStats();
-      const rs = data as RiderStatsResponse;
-      if (rs?.ok) {
-        setStats({
-          todayDeliveries: rs.data.todayDeliveries,
-          todayEarnings: rs.data.todayEarnings,
-          totalDeliveries: rs.data.totalDeliveries,
-        });
-        const normalized: HistoryItem[] = (rs.data.recentActivity || []).map(
-          (a: RecentActivity) => ({
-            id: a.transactionId || a._id || "N/A",
-            date: a.updatedAt ? new Date(a.updatedAt).toLocaleString() : "",
-            items: "—",
-            location: "—",
-            fee: 50,
-          })
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch rider's tasks and stats in parallel
+      const [tasksResponse, statsResponse] = await Promise.all([
+        deliveryApi.getMyTasks(),
+        deliveryApi.getRiderStats(),
+      ]);
+
+      // Get current transactions to ensure we have the latest data
+      const currentTransactions: Transaction[] = transactions;
+
+      // Process tasks
+      if (tasksResponse.data?.data) {
+        const newTransactions = Array.isArray(tasksResponse.data.data)
+          ? tasksResponse.data.data
+          : [];
+
+        // Only update transactions if they've changed
+        if (
+          JSON.stringify(newTransactions) !==
+          JSON.stringify(currentTransactions)
+        ) {
+          setTransactions(newTransactions);
+        }
+
+        // Process active task - check for any task that's not completed/cancelled
+        const active = transactions.find((t: Transaction) =>
+          !["completed", "cancelled", "delivery_completed"].includes(t.status)
         );
-        setHistory(normalized);
+
+        console.log(
+          "Active task statuses:",
+          transactions.map((t: Transaction) => ({
+            id: t.transactionId || t._id,
+            status: t.status,
+            isActive: ![
+              "completed",
+              "cancelled",
+              "delivery_completed",
+            ].includes(t.status),
+          }))
+        );
+
+        if (active) {
+          const taskData: Task = {
+            dbId: active._id, // Ensure dbId is always set
+            id: active.transactionId || active._id,
+            items: active.items
+              .map(
+                (it: { name: string; quantity: number }) =>
+                  `${it.quantity}x ${it.name}`
+              )
+              .join(", "),
+            amount: active.totalAmount,
+            distance: "N/A",
+            fee: active.deliveryFee || 50,
+            address: active.shippingAddress || "—",
+            customer: active.customerId
+              ? [
+                  active.customerId.firstName,
+                  active.customerId.lastName,
+                ]
+                  .filter(Boolean)
+                  .join(" ") || "Customer"
+              : "Customer",
+            status: (() => {
+              // Map backend status to frontend status
+              const statusMap: Record<string, 'pending' | 'accepted' | 'picked-up' | 'delivered' | 'in_transit' | 'pickup_completed'> = {
+                'in_transit': 'in_transit',
+                'pickup_completed': 'pickup_completed',
+                'picked-up': 'picked-up',
+                'accepted': 'accepted',
+                'completed': 'delivered',
+                'pending': 'pending'
+              };
+              return statusMap[active.status] || 'pending';
+            })(),
+            ...(active.deliveryInfo
+              ? {
+                  latitude: active.deliveryInfo.latitude,
+                  longitude: active.deliveryInfo.longitude,
+                }
+              : {}),
+            // Include contact number if available
+            ...(active.customerId?.contactNumber
+              ? { phone: active.customerId.contactNumber }
+              : {})
+          };
+
+          console.log("Setting active task:", taskData);
+          setActiveTask(taskData);
+        } else {
+          setActiveTask(null);
+        }
       }
-    } catch (e: unknown) {
-      console.error("Error fetching rider stats:", e);
-      const message =
-        e instanceof Error ? e.message : "Failed to fetch rider stats";
-      setError(message);
-      // Fallback to mock data on error
-      setStats({
-        todayDeliveries: 12,
-        todayEarnings: 2450,
-        totalDeliveries: 156,
+
+      // Calculate today's date at midnight for comparison
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Calculate today's deliveries and earnings from transactions
+      const transactionsToUse: Transaction[] = Array.isArray(
+        tasksResponse.data?.data
+      )
+        ? tasksResponse.data.data
+        : currentTransactions;
+
+      const todayTransactions = transactionsToUse.filter((t) => {
+        if (!t.updatedAt) return false;
+        const updatedAt = new Date(t.updatedAt);
+        return (
+          updatedAt >= today &&
+          (t.status === "completed" || t.status === "delivery_completed")
+        );
       });
-      setHistory(MOCK_HISTORY);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
-  // Try to get browser geolocation (best-effort)
-  const requestGeolocation = () =>
-    new Promise<{ lat: number; lng: number } | null>((resolve) => {
-      if (!("geolocation" in navigator)) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        (pos) =>
-          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 7000 }
-      );
-    });
-
-  // Fetch currently assigned task for the rider
-  const fetchActiveTask = useCallback(async () => {
-    try {
-      const coords = await requestGeolocation();
-      const { data } = await deliveryApi.getMyTasks();
-      const resp = data as MyTasksResponse;
-      const list: ApiTask[] = resp?.data || [];
-
-      // Only consider an in_transit task as active
-      const t: ApiTask | undefined = list.find(
-        (x) => x.status === "in_transit"
+      const todayDeliveries = todayTransactions.length;
+      const todayEarnings = todayTransactions.reduce<number>(
+        (sum, t) => sum + (t.deliveryFee || 0),
+        0
       );
 
-      if (!t) {
-        setActiveTask(null);
-        return;
+      // Process stats from backend
+      if (statsResponse.data?.data) {
+        const stats = statsResponse.data.data;
+        setStats((prev) => ({
+          ...prev,
+          todayDeliveries,
+          todayEarnings,
+          totalDeliveries: stats.totalDeliveries || 0,
+          totalEarnings: stats.lifetimeEarnings || 0,
+          lifetimeEarnings: stats.lifetimeEarnings || 0,
+          recentActivity: prev.recentActivity, // Preserve existing recent activity
+        }));
       }
-
-      let distanceStr = "—";
-      const dropLat = t?.deliveryInfo?.latitude;
-      const dropLng = t?.deliveryInfo?.longitude;
-      if (
-        coords &&
-        typeof dropLat === "number" &&
-        typeof dropLng === "number" &&
-        Math.abs(dropLat) > 0 &&
-        Math.abs(dropLng) > 0
-      ) {
-        const km = haversineKm(coords.lat, coords.lng, dropLat, dropLng);
-        distanceStr = `${km.toFixed(1)} km`;
-      }
-
-      const mapped: Task = {
-        dbId: t._id,
-        id: t.transactionId || t._id || "N/A",
-        items: Array.isArray(t.items)
-          ? t.items
-              .map((it: ApiTaskItem) => `${it.quantity}x ${it.name}`)
-              .join(", ")
-          : "—",
-        amount: t.totalAmount ?? 0,
-        distance: distanceStr,
-        fee: t.deliveryFee ?? 50,
-        address: t.shippingAddress ?? "—",
-        customer: t.customerId
-          ? [t.customerId.firstName, t.customerId.lastName]
-              .filter(Boolean)
-              .join(" ")
-          : undefined,
-        phone: t.customerId?.contactNumber,
-        latitude: t.deliveryInfo?.latitude,
-        longitude: t.deliveryInfo?.longitude,
-        status: "accepted",
-      };
-
-      setActiveTask(mapped);
     } catch (e: unknown) {
-      console.warn("Error fetching active task:", e);
-      // Don't block dashboard on failure
-      setActiveTask(null);
+      console.error("Error fetching rider data:", e);
+      const errorMessage =
+        e instanceof Error ? e : new Error("Failed to fetch rider data");
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [transactions]);
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchRiderStats();
-    fetchActiveTask();
-  }, [fetchRiderStats, fetchActiveTask]);
+    fetchRiderData();
+  }, [fetchRiderData]);
 
-  // Return both dynamic and mock data
-  return {
-    // Dashboard data (dynamic)
-    stats,
-    history,
-    loading,
-    error,
-    refresh: fetchRiderStats,
-
-    // Active task (dynamic)
-    activeTask,
-
-    // Helper to get mock history if needed
-    getMockHistory: () => MOCK_HISTORY,
-
-    // Allow consumers to refresh active task explicitly
-    refreshActiveTask: fetchActiveTask,
-  };
+  return useMemo(
+    () => ({
+      stats,
+      history,
+      isLoading,
+      error,
+      refresh: fetchRiderData,
+      activeTask,
+    }),
+    [stats, history, isLoading, error, fetchRiderData, activeTask]
+  );
 };

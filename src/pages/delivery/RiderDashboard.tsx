@@ -88,8 +88,8 @@ const RiderDashboard: React.FC = () => {
           customer: t.customerId
             ? [t.customerId.firstName, t.customerId.lastName]
                 .filter(Boolean)
-                .join(" ")
-            : undefined,
+                .join(" ") || 'Customer'
+            : 'Customer',
           phone: t.customerId?.contactNumber,
           latitude: t.deliveryInfo?.latitude,
           longitude: t.deliveryInfo?.longitude,
@@ -106,8 +106,13 @@ const RiderDashboard: React.FC = () => {
 
   const handlePickupSubmit = async () => {
     const currentActive = activeTaskOverride || activeTask;
+    console.log('Current active task in handlePickupSubmit:', currentActive);
+    console.log('activeTask:', activeTask);
+    console.log('activeTaskOverride:', activeTaskOverride);
+    
     if (!currentActive?.dbId) {
-      toast.error("No active task found.");
+      console.error('No dbId found in active task:', currentActive);
+      toast.error("No active task found or task ID is missing.");
       return;
     }
     const file = uploadedFiles.find((f) => f.type === "pickup")?.file;

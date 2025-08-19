@@ -36,9 +36,6 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
           </div>
 
           <div className="space-y-3">
-            <button className="w-full bg-[#b28341] hover:bg-[#996936] text-white py-3 rounded-lg font-medium transition-colors text-sm sm:text-base">
-              Edit Profile
-            </button>
             <button
               onClick={onSignOut}
               className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
