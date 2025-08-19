@@ -4,7 +4,12 @@ import type { Task, HistoryItem } from "../types/rider";
 
 // Haversine helpers (KM)
 const toRad = (x: number) => (x * Math.PI) / 180;
-const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+const haversineKm = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+) => {
   const R = 6371; // km
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
@@ -129,7 +134,8 @@ export const useRiderData = () => {
       }
     } catch (e: unknown) {
       console.error("Error fetching rider stats:", e);
-      const message = e instanceof Error ? e.message : "Failed to fetch rider stats";
+      const message =
+        e instanceof Error ? e.message : "Failed to fetch rider stats";
       setError(message);
       // Fallback to mock data on error
       setStats({
@@ -191,7 +197,9 @@ export const useRiderData = () => {
         dbId: t._id,
         id: t.transactionId || t._id || "N/A",
         items: Array.isArray(t.items)
-          ? t.items.map((it: ApiTaskItem) => `${it.quantity}x ${it.name}`).join(", ")
+          ? t.items
+              .map((it: ApiTaskItem) => `${it.quantity}x ${it.name}`)
+              .join(", ")
           : "—",
         amount: t.totalAmount ?? 0,
         distance: distanceStr,
@@ -230,7 +238,7 @@ export const useRiderData = () => {
     loading,
     error,
     refresh: fetchRiderStats,
-    
+
     // Active task (dynamic)
     activeTask,
 

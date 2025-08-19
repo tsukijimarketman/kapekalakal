@@ -18,18 +18,19 @@ export interface StatusHistory {
 export interface DeliveryInfo {
   latitude?: number;
   longitude?: number;
-  estimatedDelivery: string;
-  pickupPhoto: string;
-  deliveryPhoto: string;
-  deliveredAt: string | null;
-  adminValidatedDeliveryAt: string | null;
-  adminValidatedPickupAt: string | null;
-  pickupCompletedAt: string | null;
-  pickupValidated: boolean;
-  deliveryValidated: boolean;
-  cancellationDeadline: string;
-  canCancel: boolean;
-  assignedDeliveryId?: string | null | undefined;
+  estimatedDelivery?: string;
+  pickupPhoto?: string;
+  deliveryPhoto?: string;
+  deliveredAt?: string | null;
+  adminValidatedDeliveryAt?: string | null;
+  adminValidatedPickupAt?: string | null;
+  pickupCompletedAt?: string | null;
+  pickupValidated?: boolean;
+  deliveryValidated?: boolean;
+  cancellationDeadline?: string;
+  canCancel?: boolean;
+  assignedDeliveryId?: string | null;
+  assignedAt?: string;
 }
 
 export interface Transaction {

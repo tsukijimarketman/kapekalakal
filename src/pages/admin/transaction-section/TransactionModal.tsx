@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import {
-  FaTimes,
-  FaCheck,
-  FaUser,
-  FaTruck,
-  FaMapMarkerAlt,
-  FaCalendarAlt,
-  FaBox,
-  FaCreditCard,
-  FaImage,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaEye,
-} from "react-icons/fa";
+import { FaTimes, FaImage, FaCheckCircle, FaEye } from "react-icons/fa";
 import type { Transaction } from "../../../../src/types/transaction";
+
+interface ValidationState {
+  pickup: boolean;
+  delivery: boolean;
+}
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -21,7 +13,7 @@ interface TransactionModalProps {
   onClose: () => void;
   onValidatePickup: (transactionId: string) => Promise<void>;
   onValidateDelivery: (transactionId: string) => Promise<void>;
-  isValidating?: boolean;
+  isValidating?: ValidationState;
 }
 
 const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -30,11 +22,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   onClose,
   onValidatePickup,
   onValidateDelivery,
+  isValidating: propValidating = { pickup: false, delivery: false },
 }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isValidatingPickup, setIsValidatingPickup] = useState(false);
-  const [isValidatingDelivery, setIsValidatingDelivery] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [localValidating, setLocalValidating] = useState({
+    pickup: false,
+    delivery: false,
+  });
+
+  // Combine prop and local validation states
+  const isValidating = {
+    pickup: propValidating.pickup || localValidating.pickup,
+    delivery: propValidating.delivery || localValidating.delivery,
+  } as const;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -59,22 +60,25 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const handleValidatePickup = async () => {
-    if (!transaction || isValidatingPickup) return;
+    if (!transaction) return;
     try {
-      setIsValidatingPickup(true);
+      setLocalValidating((prev) => ({ ...prev, pickup: true }));
       await onValidatePickup(transaction._id);
       setImagePreview(null);
     } catch (error) {
       console.error("Error validating pickup:", error);
+      setValidationError(
+        error instanceof Error ? error.message : "Failed to validate pickup"
+      );
     } finally {
-      setIsValidatingPickup(false);
+      setLocalValidating((prev) => ({ ...prev, pickup: false }));
     }
   };
 
   const handleValidateDelivery = async () => {
-    if (!transaction || isValidatingDelivery) return;
+    if (!transaction) return;
     try {
-      setIsValidatingDelivery(true);
+      setLocalValidating((prev) => ({ ...prev, delivery: true }));
       await onValidateDelivery(transaction._id);
       setImagePreview(null);
     } catch (error) {
@@ -83,7 +87,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         error instanceof Error ? error.message : "Failed to validate delivery"
       );
     } finally {
-      setIsValidatingDelivery(false);
+      setLocalValidating((prev) => ({ ...prev, delivery: false }));
     }
   };
 
@@ -224,7 +228,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     Delivery Rider ID
                   </p>
                   <p className="font-medium text-[#7a4e2e] dark:text-[#e1d0a7]">
-                    {transaction.deliveryInfo.assignedDeliveryId}
+                    {transaction.deliveryInfo?.assignedDeliveryId ||
+                      "Not assigned"}
                   </p>
                 </div>
                 <div>
@@ -255,16 +260,21 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     <h3 className="text-lg font-semibold mb-2 flex items-center">
                       <FaImage className="mr-2" /> Pickup Photo
                       {transaction.deliveryInfo.pickupValidated ? (
-                        <span className="ml-2 text-green-500" title="Pickup validated">
+                        <span
+                          className="ml-2 text-green-500"
+                          title="Pickup validated"
+                        >
                           <FaCheckCircle className="inline" /> Validated
                         </span>
                       ) : (
                         <button
                           onClick={handleValidatePickup}
-                          disabled={isValidatingPickup}
+                          disabled={isValidating.pickup}
                           className="ml-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm flex items-center"
                         >
-                          {isValidatingPickup ? "Validating..." : "Validate Pickup"}
+                          {isValidating.pickup
+                            ? "Validating..."
+                            : "Validate Pickup"}
                         </button>
                       )}
                     </h3>
@@ -274,12 +284,16 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         alt="Pickup proof"
                         className="w-full h-64 object-cover rounded-lg cursor-pointer"
                         onClick={() =>
-                          setImagePreview(transaction.deliveryInfo?.pickupPhoto || null)
+                          setImagePreview(
+                            transaction.deliveryInfo?.pickupPhoto || null
+                          )
                         }
                       />
                       <button
                         onClick={() =>
-                          setImagePreview(transaction.deliveryInfo?.pickupPhoto || null)
+                          setImagePreview(
+                            transaction.deliveryInfo?.pickupPhoto || null
+                          )
                         }
                         className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded-full"
                         aria-label="View full size"
@@ -296,19 +310,25 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     <h3 className="text-lg font-semibold mb-2 flex items-center">
                       <FaImage className="mr-2" /> Delivery Photo
                       {transaction.deliveryInfo.deliveryValidated ? (
-                        <span className="ml-2 text-green-500" title="Delivery validated">
+                        <span
+                          className="ml-2 text-green-500"
+                          title="Delivery validated"
+                        >
                           <FaCheckCircle className="inline" /> Validated
                         </span>
                       ) : (
                         <button
                           onClick={handleValidateDelivery}
-                          disabled={isValidatingDelivery || !transaction.deliveryInfo.pickupValidated}
+                          disabled={
+                            isValidating.delivery ||
+                            !transaction.deliveryInfo.pickupValidated
+                          }
                           className={`ml-2 px-3 py-1 text-white rounded text-sm flex items-center ${
-                            isValidatingDelivery
+                            isValidating.delivery
                               ? "bg-blue-400 cursor-not-allowed"
                               : transaction.deliveryInfo.pickupValidated
-                                ? "bg-blue-500 hover:bg-blue-600"
-                                : "bg-gray-400 cursor-not-allowed"
+                              ? "bg-blue-500 hover:bg-blue-600"
+                              : "bg-gray-400 cursor-not-allowed"
                           }`}
                           title={
                             !transaction.deliveryInfo.pickupValidated
@@ -316,7 +336,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                               : "Validate delivery photo"
                           }
                         >
-                          {isValidatingDelivery ? "Validating..." : "Validate Delivery"}
+                          {isValidating.delivery
+                            ? "Validating..."
+                            : "Validate Delivery"}
                         </button>
                       )}
                     </h3>
@@ -326,12 +348,16 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         alt="Delivery proof"
                         className="w-full h-64 object-cover rounded-lg cursor-pointer"
                         onClick={() =>
-                          setImagePreview(transaction.deliveryInfo?.deliveryPhoto || null)
+                          setImagePreview(
+                            transaction.deliveryInfo?.deliveryPhoto || null
+                          )
                         }
                       />
                       <button
                         onClick={() =>
-                          setImagePreview(transaction.deliveryInfo?.deliveryPhoto || null)
+                          setImagePreview(
+                            transaction.deliveryInfo?.deliveryPhoto || null
+                          )
                         }
                         className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded-full"
                         aria-label="View full size"
@@ -350,50 +376,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 !transaction.deliveryInfo.pickupValidated && (
                   <button
                     onClick={handleValidatePickup}
-                    disabled={isValidatingPickup}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg 
-                             font-medium transition-colors duration-200
-                             ${
-                               isValidatingPickup
-                                 ? "bg-yellow-400 cursor-not-allowed"
-                                 : "bg-yellow-500 hover:bg-yellow-600 text-white"
-                             }`}
-                    title={
-                      isValidatingPickup
-                        ? "Validating pickup..."
-                        : "Approve the pickup proof"
-                    }
+                    disabled={isValidating.pickup}
+                    className={`px-4 py-2 rounded-md ${
+                      isValidating.pickup
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    }`}
                   >
-                    {isValidatingPickup ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Validating Pickup...
-                      </>
-                    ) : (
-                      <>
-                        <FaCheck />
-                        Validate Pickup
-                      </>
-                    )}
+                    {isValidating.pickup ? "Validating..." : "Validate Pickup"}
                   </button>
                 )}
 
@@ -401,22 +391,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 !transaction.deliveryInfo.deliveryValidated && (
                   <button
                     onClick={handleValidateDelivery}
-                    disabled={isValidatingDelivery}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg 
-                             font-medium transition-colors duration-200
-                             ${
-                               isValidatingDelivery
-                                 ? "bg-green-400 cursor-not-allowed"
-                                 : "bg-green-500 hover:bg-green-600 text-white"
-                             }`}
-                    title={
-                      isValidatingDelivery
-                        ? "Validating delivery..."
-                        : "Approve the delivery proof"
-                    }
+                    disabled={isValidating.delivery}
+                    className={`px-4 py-2 rounded-md ${
+                      isValidating.delivery
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }`}
                   >
-                    {isValidatingDelivery ? (
-                      <>
+                    {isValidating.delivery ? (
+                      <div className="flex items-center justify-center">
                         <svg
                           className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
                           xmlns="http://www.w3.org/2000/svg"
@@ -430,20 +413,17 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                             r="10"
                             stroke="currentColor"
                             strokeWidth="4"
-                          ></circle>
+                          />
                           <path
                             className="opacity-75"
                             fill="currentColor"
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
+                          />
                         </svg>
                         Validating Delivery...
-                      </>
+                      </div>
                     ) : (
-                      <>
-                        <FaCheck />
-                        Validate Delivery
-                      </>
+                      <span>Validate Delivery</span>
                     )}
                   </button>
                 )}
@@ -461,7 +441,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
         </div>
         {validationError && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-4" role="alert">
+          <div
+            className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-4"
+            role="alert"
+          >
             <p className="font-bold">Validation Error</p>
             <p>{validationError}</p>
           </div>

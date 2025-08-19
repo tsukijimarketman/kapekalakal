@@ -99,6 +99,7 @@ const RiderDashboard: React.FC = () => {
       }
     } catch (e) {
       // Non-blocking; still navigate
+      toast.error("Failed to accept task");
     }
     setActiveSection("active");
   };
@@ -122,7 +123,8 @@ const RiderDashboard: React.FC = () => {
     } catch (err: unknown) {
       type AxiosErrorLike = { response?: { data?: { message?: string } } };
       const possible = err as AxiosErrorLike;
-      const msg = possible.response?.data?.message || "Failed to submit pickup proof";
+      const msg =
+        possible.response?.data?.message || "Failed to submit pickup proof";
       toast.error(msg);
     }
   };
@@ -145,7 +147,8 @@ const RiderDashboard: React.FC = () => {
     } catch (err: unknown) {
       type AxiosErrorLike = { response?: { data?: { message?: string } } };
       const possible = err as AxiosErrorLike;
-      const msg = possible.response?.data?.message || "Failed to submit delivery proof";
+      const msg =
+        possible.response?.data?.message || "Failed to submit delivery proof";
       toast.error(msg);
     }
   };
@@ -160,30 +163,30 @@ const RiderDashboard: React.FC = () => {
         return <DashboardSection stats={stats} history={history} />;
       case "tasks":
         return <TasksSection onAcceptTask={acceptTask} />;
-      case "active":
-        {
-          const currentActive = activeTaskOverride || activeTask;
-          if (!currentActive) {
-            return (
-              <div className="bg-white dark:bg-[#67412c] rounded-xl shadow p-6 text-center animate-fade-in">
-                <p className="text-sm sm:text-base opacity-80">
-                  No active delivery yet. Go to the Tasks tab to accept a delivery.
-                </p>
-              </div>
-            );
-          }
+      case "active": {
+        const currentActive = activeTaskOverride || activeTask;
+        if (!currentActive) {
           return (
-            <ActiveDeliverySection
-              activeTask={currentActive}
-              currentDeliveryState={currentDeliveryState}
-              setCurrentDeliveryState={setCurrentDeliveryState}
-              uploadedFiles={uploadedFiles}
-              onFileUpload={handleFileUpload}
-              onPickupSubmit={handlePickupSubmit}
-              onDeliverySubmit={handleDeliverySubmit}
-            />
+            <div className="bg-white dark:bg-[#67412c] rounded-xl shadow p-6 text-center animate-fade-in">
+              <p className="text-sm sm:text-base opacity-80">
+                No active delivery yet. Go to the Tasks tab to accept a
+                delivery.
+              </p>
+            </div>
           );
         }
+        return (
+          <ActiveDeliverySection
+            activeTask={currentActive}
+            currentDeliveryState={currentDeliveryState}
+            setCurrentDeliveryState={setCurrentDeliveryState}
+            uploadedFiles={uploadedFiles}
+            onFileUpload={handleFileUpload}
+            onPickupSubmit={handlePickupSubmit}
+            onDeliverySubmit={handleDeliverySubmit}
+          />
+        );
+      }
       case "history":
         return <HistorySection history={history} />;
       case "profile":

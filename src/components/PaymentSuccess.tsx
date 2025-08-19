@@ -30,7 +30,14 @@ const PaymentSuccess: React.FC = () => {
         const raw = localStorage.getItem("checkoutPayload");
         if (!raw) return;
         const payload = JSON.parse(raw);
-        const { provider, sourceId, items, shippingAddress, latitude, longitude } = payload || {};
+        const {
+          provider,
+          sourceId,
+          items,
+          shippingAddress,
+          latitude,
+          longitude,
+        } = payload || {};
         if (!sourceId || !["gcash", "grab_pay"].includes(provider)) return;
 
         // Prevent duplicate submissions

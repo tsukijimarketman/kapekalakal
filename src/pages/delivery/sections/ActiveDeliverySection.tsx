@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Truck, Camera, Navigation } from "lucide-react";
+import { Truck, Camera } from "lucide-react";
 import TaskCard from "../shared/TaskCard";
 import FileUploadArea from "../shared/FileUploadArea";
 import type { Task, DeliveryState, UploadedFile } from "../types/rider";

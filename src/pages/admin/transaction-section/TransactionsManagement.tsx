@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaSearch,
   FaEye,
@@ -6,18 +6,20 @@ import {
   FaSpinner,
   FaTruck,
   FaMapMarkerAlt,
+  FaClock,
   FaBox,
-  FaCheck,
   FaTimes,
+  FaCheckCircle,
+  FaCamera,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import TransactionModal from "./TransactionModal";
-// Use relative imports to avoid path resolution issues
+import DeliveryValidationModal from "./DeliveryValidationModal";
 import deliveryApi from "../../../services/deliveryApi";
 import type { Transaction } from "../../../../src/types/transaction";
 
-// Status colors mapping
-const statusColors = {
+// Status colors mapping with proper typing
+const statusColors: StatusColors = {
   pending:
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400",
   processing:
@@ -32,30 +34,74 @@ const statusColors = {
   default: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
 };
 
+// Define type for validation state
+interface ValidationState {
+  pickup: boolean;
+  delivery: boolean;
+}
+
+// Define type for status filter
+type StatusFilter =
+  | "all"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "cancelled"
+  | "to_receive"
+  | "in_transit";
+
+// Define type for validation filter
+type ValidationFilter = "all" | "needs_validation" | "validated";
+
+// Define type for status colors
+interface StatusColors {
+  [key: string]: string;
+  pending: string;
+  processing: string;
+  completed: string;
+  cancelled: string;
+  to_receive: string;
+  in_transit: string;
+  default: string;
+}
+
 const TransactionsManagement: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [validationFilter, setValidationFilter] = useState("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [validationFilter, setValidationFilter] =
+    useState<ValidationFilter>("all");
+  const [isTransactionModalOpen, setIsTransactionModalOpen] =
+    useState<boolean>(false);
+  const [isValidationModalOpen, setIsValidationModalOpen] =
+    useState<boolean>(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
-  const [isValidating, setIsValidating] = useState(false);
+  const [isValidating, setIsValidating] = useState<ValidationState>({
+    pickup: false,
+    delivery: false,
+  });
 
   // Format date with error handling
   const formatDate = (dateString: string | Date | undefined | null): string => {
     if (!dateString) return "N/A";
+
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Invalid Date";
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date value:", dateString);
+        return "Invalid Date";
+      }
+
       return date.toLocaleString("en-PH", {
         year: "numeric",
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
       });
     } catch (error) {
       console.error("Error formatting date:", error, "Input:", dateString);
@@ -63,207 +109,279 @@ const TransactionsManagement: React.FC = () => {
     }
   };
 
-  // Fetch transactions from the backend
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await deliveryApi.listAllTasks();
+  // Fetch transactions from the API
+  const fetchTransactions = useCallback(async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await deliveryApi.listAllTasks();
 
-        if (response && response.data) {
-          // The API returns { ok: true, data: [...] }
-          const responseData = response.data;
-          // Handle both array and single object responses
-          const transactionsData = Array.isArray(responseData)
-            ? responseData
-            : responseData.data && Array.isArray(responseData.data)
-            ? responseData.data
-            : [responseData];
+      if (response && response.data) {
+        // The API returns { ok: true, data: [...] }
+        const responseData = response.data;
+        // Handle both array and single object responses
+        const transactionsData = Array.isArray(responseData)
+          ? responseData
+          : responseData.data && Array.isArray(responseData.data)
+          ? responseData.data
+          : [responseData];
 
-          console.log("Fetched transactions:", transactionsData);
-          setTransactions(transactionsData);
-        } else {
-          console.log("No data in response:", response);
-          setTransactions([]);
-        }
-      } catch (err) {
-        const error = err as Error;
-        const errorMessage = error.message || "Failed to load transactions";
-        setError(errorMessage);
-        console.error("Error fetching transactions:", error);
-        toast.error(errorMessage);
+        console.log("Fetched transactions:", transactionsData);
+        setTransactions(transactionsData);
+      } else {
+        console.log("No data in response:", response);
         setTransactions([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    fetchTransactions();
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      setError("Failed to load transactions. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Handle validation
+  // Initial fetch
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  // Handle validation actions with proper type safety and error handling
   const handleValidatePickup = async (transactionId: string) => {
+    if (!transactionId) {
+      console.error("No transaction ID provided for pickup validation");
+      return;
+    }
+
     try {
-      setIsValidating(true);
+      setIsValidating((prev) => ({ ...prev, pickup: true }));
+
+      // Call the API to validate pickup
       await deliveryApi.validatePickup(transactionId);
 
-      // Update local state
-      setTransactions((prev) =>
-        prev.map((tx) =>
-          tx._id === transactionId
-            ? {
-                ...tx,
-                deliveryInfo: {
-                  ...tx.deliveryInfo,
-                  pickupValidated: true,
-                  adminValidatedPickupAt: new Date().toISOString(),
-                },
-              }
-            : tx
-        )
-      );
+      // Refresh the transactions list to get updated data
+      await fetchTransactions();
 
-      toast.success("Pickup validated successfully");
-    } catch (err) {
-      const error = err as Error;
-      console.error("Failed to validate pickup:", error);
-      toast.error(error.message || "Failed to validate pickup");
+      toast.success("Pickup validated successfully!");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to validate pickup";
+      console.error("Error validating pickup:", error);
+      toast.error(errorMessage);
     } finally {
-      setIsValidating(false);
+      setIsValidating((prev) => ({ ...prev, pickup: false }));
     }
   };
 
   const handleValidateDelivery = async (transactionId: string) => {
+    if (!transactionId) {
+      console.error("No transaction ID provided for delivery validation");
+      return;
+    }
+
     try {
-      setIsValidating(true);
+      setIsValidating((prev) => ({ ...prev, delivery: true }));
+
+      // Call the API to validate delivery
       await deliveryApi.validateDelivery(transactionId);
 
-      // Update local state
-      setTransactions((prev) =>
-        prev.map((tx) =>
-          tx._id === transactionId
-            ? {
-                ...tx,
-                status: "completed",
-                deliveryInfo: {
-                  ...tx.deliveryInfo,
-                  deliveryValidated: true,
-                  adminValidatedDeliveryAt: new Date().toISOString(),
-                  deliveredAt: new Date().toISOString(),
-                },
-              }
-            : tx
-        )
-      );
+      // Refresh the transactions list to get updated data
+      await fetchTransactions();
 
-      toast.success("Delivery validated successfully");
-    } catch (err) {
-      const error = err as Error;
-      console.error("Failed to validate delivery:", error);
-      toast.error(error.message || "Failed to validate delivery");
+      toast.success("Delivery validated successfully! Transaction completed.");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to validate delivery";
+      console.error("Error validating delivery:", error);
+      toast.error(errorMessage);
     } finally {
-      setIsValidating(false);
+      setIsValidating((prev) => ({ ...prev, delivery: false }));
+    }
+  };
+
+  // Modal handlers with proper null checks and type safety
+  const openTransactionModal = (transaction: Transaction) => {
+    if (!transaction) return;
+
+    const { deliveryInfo, statusHistory = [], items = [] } = transaction;
+
+    // Create a properly typed transaction object with safe defaults
+    const modalTransaction: Transaction = {
+      ...transaction,
+      deliveryInfo: {
+        ...deliveryInfo,
+        estimatedDelivery: deliveryInfo?.estimatedDelivery ?? "",
+        pickupPhoto: deliveryInfo?.pickupPhoto ?? "",
+        deliveryPhoto: deliveryInfo?.deliveryPhoto ?? "",
+        deliveredAt: deliveryInfo?.deliveredAt ?? null,
+        adminValidatedDeliveryAt:
+          deliveryInfo?.adminValidatedDeliveryAt ?? null,
+        adminValidatedPickupAt: deliveryInfo?.adminValidatedPickupAt ?? null,
+        pickupCompletedAt: deliveryInfo?.pickupCompletedAt ?? null,
+        pickupValidated: deliveryInfo?.pickupValidated ?? false,
+        deliveryValidated: deliveryInfo?.deliveryValidated ?? false,
+        cancellationDeadline: deliveryInfo?.cancellationDeadline ?? "",
+        canCancel: deliveryInfo?.canCancel ?? false,
+        assignedDeliveryId: deliveryInfo?.assignedDeliveryId ?? null,
+        latitude: deliveryInfo?.latitude,
+        longitude: deliveryInfo?.longitude,
+      },
+      statusHistory: statusHistory ?? [],
+      items: items ?? [],
+    };
+
+    setSelectedTransaction(modalTransaction);
+    setIsTransactionModalOpen(true);
+  };
+
+  const openValidationModal = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsValidationModalOpen(true);
+  };
+
+  const closeModals = () => {
+    setIsTransactionModalOpen(false);
+    setIsValidationModalOpen(false);
+    setSelectedTransaction(null);
+  };
+
+  // Handle filter changes with proper type safety
+  const handleStatusFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    // Type assertion with validation
+    if (
+      [
+        "all",
+        "pending",
+        "processing",
+        "completed",
+        "cancelled",
+        "to_receive",
+        "in_transit",
+      ].includes(value)
+    ) {
+      setStatusFilter(value as StatusFilter);
+    }
+  };
+
+  const handleValidationFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    // Type assertion with validation
+    if (["all", "needs_validation", "validated"].includes(value)) {
+      setValidationFilter(value as ValidationFilter);
     }
   };
 
   // Filter transactions
-  const filteredTransactions = transactions.filter((transaction) => {
-    // Skip if transaction is null/undefined
-    if (!transaction) return false;
+  const filteredTransactions = transactions.filter(
+    (transaction: Transaction) => {
+      // Skip if transaction is null/undefined
+      if (!transaction) return false;
 
-    // Search by transaction ID, customer ID, shipping address, or product names
-    const matchesSearch = searchTerm
-      ? [
-          transaction.transactionId,
-          transaction.customerId,
-          transaction.shippingAddress,
-          transaction.paymentMethod,
-          transaction.status,
-        ].some(
-          (value) =>
-            value &&
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : true;
+      // Search by transaction ID, customer ID, shipping address, or product names
+      const matchesSearch = searchTerm
+        ? [
+            transaction.transactionId,
+            transaction.customerId,
+            transaction.shippingAddress,
+            transaction.paymentMethod,
+            transaction.status,
+            ...(transaction.items?.map((item) => item.name) || []),
+          ].some(
+            (field) =>
+              field &&
+              field.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        : true;
 
-    // Status filter
-    const matchesStatus = (() => {
-      if (statusFilter === "all") return true;
-      if (statusFilter === "in_transit")
-        return transaction.status === "in_transit";
-      if (statusFilter === "to_receive")
-        return transaction.status === "to_receive";
-      if (statusFilter === "cancelled")
-        return transaction.status === "cancelled";
-      if (statusFilter === "completed")
-        return transaction.status === "completed";
-      return true;
-    })();
+      // Filter by status
+      const matchesStatus =
+        statusFilter === "all" || transaction.status === statusFilter;
 
-    // Validation filter
-    const matchesValidation = (() => {
-      if (validationFilter === "all") return true;
-      if (validationFilter === "pending") {
-        return (
-          !transaction.deliveryInfo?.pickupValidated ||
-          !transaction.deliveryInfo?.deliveryValidated
-        );
-      }
-      if (validationFilter === "validated") {
-        return (
-          transaction.deliveryInfo?.pickupValidated &&
-          transaction.deliveryInfo?.deliveryValidated
-        );
-      }
-      return true;
-    })();
+      // Filter by validation status
+      const matchesValidation = (() => {
+        if (validationFilter === "all") return true;
+        if (validationFilter === "needs_validation") {
+          return (
+            (transaction.deliveryInfo?.pickupPhoto &&
+              !transaction.deliveryInfo?.pickupValidated) ||
+            (transaction.deliveryInfo?.deliveryPhoto &&
+              !transaction.deliveryInfo?.deliveryValidated)
+          );
+        }
+        if (validationFilter === "validated") {
+          return (
+            transaction.deliveryInfo?.pickupValidated ||
+            transaction.deliveryInfo?.deliveryValidated
+          );
+        }
+        return true;
+      })();
 
-    return matchesSearch && matchesStatus && matchesValidation;
-  });
+      return matchesSearch && matchesStatus && matchesValidation;
+    }
+  );
 
   // Get status color with type safety
   const getStatusColor = (status: string | undefined | null): string => {
-    if (!status) return statusColors.default;
+    if (!status || !(status in statusColors)) return statusColors.default;
+    return statusColors[status as keyof StatusColors];
+  };
 
-    const normalizedStatus = status.toLowerCase();
-    return (
-      statusColors[normalizedStatus as keyof typeof statusColors] ||
-      statusColors.default
+  // Check if transaction has photos to validate
+  const hasPhotosToValidate = (transaction: Transaction): boolean => {
+    const { deliveryInfo } = transaction;
+    return Boolean(
+      (deliveryInfo?.pickupPhoto && deliveryInfo.pickupPhoto !== "") ||
+        (deliveryInfo?.deliveryPhoto && deliveryInfo.deliveryPhoto !== "")
     );
   };
 
-  // Transaction modal handler with proper type safety
-  const handleOpenModal = (transaction: Transaction) => {
-    const { deliveryInfo, statusHistory = [], items = [] } = transaction;
+  // Check if transaction needs validation
+  const needsValidation = (transaction: Transaction): boolean => {
+    const { deliveryInfo } = transaction;
+    if (!deliveryInfo) return false;
 
-    // Create a properly typed transaction object
-    const modalTransaction: Transaction = {
-      ...transaction,
-      deliveryInfo: {
-        estimatedDelivery: deliveryInfo?.estimatedDelivery || "",
-        pickupPhoto: deliveryInfo?.pickupPhoto || "",
-        deliveryPhoto: deliveryInfo?.deliveryPhoto || "",
-        deliveredAt: deliveryInfo?.deliveredAt || null,
-        adminValidatedDeliveryAt:
-          deliveryInfo?.adminValidatedDeliveryAt || null,
-        adminValidatedPickupAt: deliveryInfo?.adminValidatedPickupAt || null,
-        pickupCompletedAt: deliveryInfo?.pickupCompletedAt || null,
-        pickupValidated: deliveryInfo?.pickupValidated || false,
-        deliveryValidated: deliveryInfo?.deliveryValidated || false,
-        cancellationDeadline: deliveryInfo?.cancellationDeadline || "",
-        canCancel: deliveryInfo?.canCancel || false,
-        assignedDeliveryId: deliveryInfo?.assignedDeliveryId || null,
-        // Optional fields with null checks
-        latitude: deliveryInfo?.latitude,
-        longitude: deliveryInfo?.longitude,
-      },
-      statusHistory,
-      items,
-    };
+    const needsPickupValidation = Boolean(
+      deliveryInfo.pickupPhoto &&
+        deliveryInfo.pickupPhoto !== "" &&
+        deliveryInfo.pickupValidated !== true
+    );
 
-    setSelectedTransaction(modalTransaction);
-    setIsModalOpen(true);
+    const needsDeliveryValidation = Boolean(
+      deliveryInfo.deliveryPhoto &&
+        deliveryInfo.deliveryPhoto !== "" &&
+        deliveryInfo.deliveryValidated !== true
+    );
+
+    return needsPickupValidation || needsDeliveryValidation;
+  };
+
+  // Render validation status badge with proper null checks
+  const renderValidationBadge = (
+    validated: boolean | undefined,
+    type: "pickup" | "delivery"
+  ) => {
+    const isPickup = type === "pickup";
+
+    if (validated) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <FaCheckCircle className="mr-1" />
+          {isPickup ? "Pickup Validated" : "Delivery Validated"}
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+        <FaClock className="mr-1" />
+        {isPickup ? "Needs Pickup Validation" : "Needs Delivery Validation"}
+      </span>
+    );
   };
 
   if (isLoading) {
@@ -323,14 +441,14 @@ const TransactionsManagement: React.FC = () => {
               )}
             </div>
 
-            {/* Status Filter - Full width on mobile, 1 column on sm */}
+            {/* Status Filter */}
             <div className="w-full">
               <select
                 className="w-full px-3 py-2 rounded-lg border border-[#e1d0a7] dark:border-[#7a4e2e] 
                   bg-[#f9f6ed] dark:bg-[#59382a] text-[#59382a] dark:text-[#f9f6ed]
                   focus:outline-none focus:ring-2 focus:ring-[#b28341]"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={handleStatusFilterChange}
               >
                 <option value="all">All Status</option>
                 <option value="to_receive">To Receive</option>
@@ -340,17 +458,17 @@ const TransactionsManagement: React.FC = () => {
               </select>
             </div>
 
-            {/* Validation Filter - Full width on mobile, 1 column on sm */}
+            {/* Validation Filter */}
             <div className="w-full">
               <select
                 className="w-full px-3 py-2 rounded-lg border border-[#e1d0a7] dark:border-[#7a4e2e] 
                   bg-[#f9f6ed] dark:bg-[#59382a] text-[#59382a] dark:text-[#f9f6ed]
                   focus:outline-none focus:ring-2 focus:ring-[#b28341]"
                 value={validationFilter}
-                onChange={(e) => setValidationFilter(e.target.value)}
+                onChange={handleValidationFilterChange}
               >
                 <option value="all">All Validations</option>
-                <option value="pending">Pending</option>
+                <option value="needs_validation">Needs Validation</option>
                 <option value="validated">Validated</option>
               </select>
             </div>
@@ -393,14 +511,31 @@ const TransactionsManagement: React.FC = () => {
                   </span>
                 </div>
 
-                <button
-                  onClick={() => handleOpenModal(transaction)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#b28341] hover:bg-[#996936] 
-                           text-white rounded-lg transition-colors duration-200"
-                >
-                  <FaEye />
-                  View Details
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => openTransactionModal(transaction)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-[#b28341] hover:bg-[#996936] 
+                             text-white rounded-lg transition-colors duration-200 flex-1"
+                  >
+                    <FaEye />
+                    View Details
+                  </button>
+                  {hasPhotosToValidate(transaction) && (
+                    <button
+                      onClick={() => openValidationModal(transaction)}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 flex-1 text-white ${
+                        needsValidation(transaction)
+                          ? "bg-orange-600 hover:bg-orange-700"
+                          : "bg-green-600 hover:bg-green-700"
+                      }`}
+                    >
+                      <FaCamera />
+                      {needsValidation(transaction)
+                        ? "Validate Photos"
+                        : "View Validation"}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Transaction Info Grid */}
@@ -466,64 +601,41 @@ const TransactionsManagement: React.FC = () => {
                 </div>
               </div>
 
-              {/* Validation Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Pickup Validation */}
-                {transaction.deliveryInfo?.pickupPhoto && (
-                  <div className="flex-1">
-                    {transaction.deliveryInfo.pickupValidated ? (
-                      <div
-                        className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 
-                                    text-green-800 dark:text-green-400 rounded-lg"
-                      >
-                        <FaCheck />
-                        <span className="text-sm font-medium">
-                          Pickup Validated
-                        </span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleValidatePickup(transaction._id)}
-                        disabled={isValidating}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 
-                                 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg 
-                                 transition-colors duration-200 font-medium disabled:opacity-50"
-                      >
-                        <FaCheck />
-                        Validate Pickup
-                      </button>
-                    )}
-                  </div>
-                )}
+              {/* Validation Status */}
+              {hasPhotosToValidate(transaction) && (
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#e1d0a7] dark:border-[#7a4e2e]">
+                  {/* Pickup Status */}
+                  {transaction.deliveryInfo?.pickupPhoto && (
+                    <div className="flex-1">
+                      {renderValidationBadge(
+                        transaction.deliveryInfo?.pickupValidated,
+                        "pickup"
+                      )}
+                    </div>
+                  )}
 
-                {/* Delivery Validation */}
-                {transaction.deliveryInfo?.deliveryPhoto && (
-                  <div className="flex-1">
-                    {transaction.deliveryInfo.deliveryValidated ? (
-                      <div
-                        className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 
-                                    text-green-800 dark:text-green-400 rounded-lg"
-                      >
-                        <FaCheck />
-                        <span className="text-sm font-medium">
-                          Delivery Validated
-                        </span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleValidateDelivery(transaction._id)}
-                        disabled={isValidating}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 
-                                 bg-green-500 hover:bg-green-600 text-white rounded-lg 
-                                 transition-colors duration-200 font-medium disabled:opacity-50"
-                      >
-                        <FaCheck />
-                        Validate Delivery
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {/* Delivery Status */}
+                  {transaction.deliveryInfo?.deliveryPhoto && (
+                    <div className="flex-1">
+                      {transaction.deliveryInfo?.deliveryValidated ? (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 rounded-lg">
+                          <FaCheckCircle />
+                          <span className="text-sm font-medium">
+                            Delivery Validated
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-400 rounded-lg">
+                          <FaCamera />
+                          <span className="text-sm font-medium">
+                            Delivery Pending Validation
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -546,14 +658,41 @@ const TransactionsManagement: React.FC = () => {
       </div>
 
       {/* Transaction Details Modal */}
-      <TransactionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        transaction={selectedTransaction}
-        onValidatePickup={handleValidatePickup}
-        onValidateDelivery={handleValidateDelivery}
-        isValidating={isValidating}
-      />
+      {selectedTransaction && (
+        <TransactionModal
+          isOpen={isTransactionModalOpen}
+          transaction={selectedTransaction}
+          onClose={closeModals}
+          onValidatePickup={handleValidatePickup}
+          onValidateDelivery={handleValidateDelivery}
+          isValidating={isValidating}
+        />
+      )}
+
+      {/* Delivery Validation Modal */}
+      {selectedTransaction?.deliveryInfo && selectedTransaction._id && (
+        <DeliveryValidationModal
+          isOpen={isValidationModalOpen}
+          onClose={closeModals}
+          onValidate={async (type: "pickup" | "delivery") => {
+            if (!selectedTransaction._id) return;
+
+            if (type === "pickup") {
+              await handleValidatePickup(selectedTransaction._id);
+            } else {
+              await handleValidateDelivery(selectedTransaction._id);
+            }
+          }}
+          pickupPhoto={selectedTransaction.deliveryInfo?.pickupPhoto}
+          deliveryPhoto={selectedTransaction.deliveryInfo?.deliveryPhoto}
+          isPickupValidated={
+            selectedTransaction.deliveryInfo?.pickupValidated ?? false
+          }
+          isDeliveryValidated={
+            selectedTransaction.deliveryInfo?.deliveryValidated ?? false
+          }
+        />
+      )}
     </div>
   );
 };
