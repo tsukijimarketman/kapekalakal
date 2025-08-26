@@ -24,17 +24,40 @@ export const API_ENDPOINTS = {
   },
 };
 
-// Default fetch options with credentials
-export const fetchWithCredentials = (
+// Enhanced fetch with credentials and error handling
+export const fetchWithCredentials = async (
   url: string,
   options: RequestInit = {}
 ) => {
-  return fetch(url, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+  };
+
+  // Ensure we don't override user-provided headers
+  const headers = {
+    ...defaultHeaders,
+    ...(options.headers || {}),
+  };
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
+
+    // If unauthorized, clear user and redirect to login
+    if (response.status === 401) {
+      // You might want to handle this differently based on your auth flow
+      if (window.location.pathname !== '/signin') {
+        window.location.href = '/signin';
+      }
+      throw new Error('Unauthorized');
+    }
+
+    return response;
+  } catch (error) {
+    console.error('API request failed:', error);
+    throw error;
+  }
 };
