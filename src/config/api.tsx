@@ -46,13 +46,11 @@ export const fetchWithCredentials = async (
       headers,
     });
 
-    // If unauthorized, clear user and redirect to login
+    // Don't redirect on 401, let the component handle it
     if (response.status === 401) {
-      // You might want to handle this differently based on your auth flow
-      if (window.location.pathname !== '/signin') {
-        window.location.href = '/signin';
-      }
-      throw new Error('Unauthorized');
+      const error = new Error('Unauthorized') as Error & { status: number };
+      error.status = 401;
+      throw error;
     }
 
     return response;
