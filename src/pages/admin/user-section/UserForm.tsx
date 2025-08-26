@@ -48,7 +48,12 @@ const UserForm: React.FC<UserFormProps> = ({
     profileImage: "",
   });
 
-  const [errors, setErrors] = useState<Partial<UserFormData>>({});
+  // Define a type for form errors that maps each form field to an optional error message
+  type FormErrors = {
+    [K in keyof UserFormData]?: string;
+  };
+
+  const [errors, setErrors] = useState<FormErrors>({});
 
   // Initialize form data when editing
   useEffect(() => {
@@ -84,8 +89,9 @@ const UserForm: React.FC<UserFormProps> = ({
     setErrors({});
   }, [editingUser, mode, isOpen]); // Changed from 'user' to 'editingUser'
 
+  // Handle input changes for both input and textarea elements
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -94,16 +100,16 @@ const UserForm: React.FC<UserFormProps> = ({
     }));
 
     // Clear error when user starts typing
-    if (errors[name as keyof UserFormData]) {
+    if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({
         ...prev,
-        [name]: undefined,
+        [name]: undefined as string | undefined,
       }));
     }
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<UserFormData> = {};
+    const newErrors: FormErrors = {};
 
     if (!formData.firstName.trim()) {
       newErrors.firstName = "First name is required";
@@ -376,7 +382,7 @@ const UserForm: React.FC<UserFormProps> = ({
             <textarea
               name="address"
               value={formData.address}
-              onChange={(e) => handleInputChange(e as any)}
+              onChange={handleInputChange}
               rows={3}
               className="w-full px-3 py-2 border border-[#e1d0a7] dark:border-[#7a4e2e] rounded-md focus:outline-none focus:ring-2 focus:ring-[#b28341] dark:bg-[#59382a] dark:text-[#e1d0a7]"
               placeholder="Enter address"

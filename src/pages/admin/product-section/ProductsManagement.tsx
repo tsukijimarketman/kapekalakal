@@ -109,7 +109,7 @@ const ProductsManagement: React.FC = () => {
     setActionLoading(true);
     setActionError(null);
     try {
-      await deleteProductApi(productId, ""); // No token needed if using cookies
+      await deleteProductApi(productId); // No token needed if using cookies
       setDeleteConfirm(null);
       toast.success("Product deleted successfully!");
       // Refetch products after delete
@@ -137,10 +137,10 @@ const ProductsManagement: React.FC = () => {
     setActionError(null);
     try {
       if (formMode === "create") {
-        await createProduct(formData, ""); // No token needed if using cookies
+        await createProduct(formData); // No token needed if using cookies
         toast.success("Product created successfully!");
       } else if (editingProduct) {
-        await updateProduct(editingProduct._id, formData, "");
+        await updateProduct(editingProduct._id, formData);
         toast.success("Product updated successfully!");
       }
       setIsFormOpen(false);
