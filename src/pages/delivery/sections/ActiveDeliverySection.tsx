@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Truck, Camera } from "lucide-react";
 import TaskCard from "../shared/TaskCard";
 import FileUploadArea from "../shared/FileUploadArea";
@@ -9,6 +9,23 @@ import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Haversine distance calculation
+const toRad = (x: number) => (x * Math.PI) / 180;
+
+const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 const defaultIcon = L.icon({
   iconUrl: markerIcon,
@@ -44,6 +61,46 @@ const ActiveDeliverySection: React.FC<ActiveDeliverySectionProps> = ({
 }) => {
   const pickupFileRef = useRef<HTMLInputElement>(null);
   const deliveryFileRef = useRef<HTMLInputElement>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [distance, setDistance] = useState<string>("-");
+
+  // Get current location for distance calculation
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return;
+    
+    const getLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const location = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          };
+          setCurrentLocation(location);
+          
+          // Calculate distance if we have both locations
+          if (activeTask.latitude && activeTask.longitude) {
+            const dist = haversineKm(
+              location.lat,
+              location.lng,
+              activeTask.latitude,
+              activeTask.longitude
+            );
+            setDistance(`${dist.toFixed(1)} km`);
+          }
+        },
+        (err) => {
+          console.error("Error getting location:", err);
+          setDistance("-");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    };
+
+    getLocation();
+    // Update distance periodically (every 30 seconds)
+    const interval = setInterval(getLocation, 30000);
+    return () => clearInterval(interval);
+  }, [activeTask.latitude, activeTask.longitude]);
 
   const hasPin =
     typeof activeTask.latitude === "number" &&
@@ -76,7 +133,13 @@ const ActiveDeliverySection: React.FC<ActiveDeliverySectionProps> = ({
           </h2>
         </div>
         <div className="p-4">
-          <TaskCard task={activeTask} showActions={false} />
+          <TaskCard 
+            task={{
+              ...activeTask,
+              distance: distance
+            }} 
+            showActions={false} 
+          />
 
           {/* Map */}
           <div className="mb-4 rounded-lg overflow-hidden border border-[#e1d0a7] dark:border-[#7a4e2e] z-5">

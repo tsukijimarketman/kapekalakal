@@ -339,66 +339,56 @@ const ToPay: React.FC = () => {
       return;
     }
 
-    // PayMongo providers: redirect flow
-    if (paymentMethod === "gcash") {
-      await initiatePaymongoRedirect("gcash");
-      return;
-    }
-    if (paymentMethod === "grab_pay") {
-      await initiatePaymongoRedirect("grab_pay");
-      return;
-    }
-
-    if (paymentMethod === "card") {
-      setShowPaymentModal(true);
-      return;
-    }
-
-    setIsPlacingOrder(true);
-
-    try {
-      if (paymentMethod === "gcash" || paymentMethod === "grab_pay") {
-        const amount = Math.round(grandTotal * 100); // Convert to centavos
-        const res = await axios.post(
-          `${import.meta.env.VITE_API_URL}/payment/source`,
+    // For COD, directly place the order
+    if (paymentMethod === "cod") {
+      setIsPlacingOrder(true);
+      try {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/payment/create-cod`,
           {
-            amount,
-            currency: "PHP",
-            type: paymentMethod,
-            redirectUrl: `${window.location.origin}/payment-success`,
-            metadata: {
-              items: JSON.stringify(selectedItems),
-              shippingAddress: deliveryAddress?.address || "",
-              latitude: deliveryAddress?.latitude || 0,
-              longitude: deliveryAddress?.longitude || 0,
+            selectedItems: selectedItems.map((item) => ({
+              ...item,
+              productId: item.productId?._id || item.productId, // Ensure we're sending just the ID
+            })),
+            deliveryAddress: {
+              ...deliveryAddress,
+              phone: deliveryAddress.phone || "", // Ensure phone is always a string
             },
           },
-          { withCredentials: true }
-        );
-        const checkOutUrl = res.data.data.attributes.redirect.checkout_url;
-        window.location.href = checkOutUrl;
-      } else if (paymentMethod === "cod") {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/payment/create`,
           {
-            selectedItems,
-            deliveryAddress,
-            paymentMethod: "cod",
-          },
-          { withCredentials: true }
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
         );
-        toast.success("Order placed successfully! (COD)");
-        navigate("/payment-success");
+
+        if (response.data.success) {
+          toast.success("Order placed successfully! (Cash on Delivery)");
+          navigate("/payment-success");
+        } else {
+          throw new Error(response.data.message || "Failed to place order");
+        }
+      } catch (error: any) {
+        console.error("COD order error:", error);
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to place order. Please try again."
+        );
+      } finally {
+        setIsPlacingOrder(false);
       }
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.error?.message ||
-          error.response?.data?.error ||
-          error.message ||
-          "Payment Failed"
-      );
-    } finally {
-      setIsPlacingOrder(false);
+      return;
+    }
+
+    // For other payment methods, use existing flows
+    if (paymentMethod === "gcash") {
+      await initiatePaymongoRedirect("gcash");
+    } else if (paymentMethod === "grab_pay") {
+      await initiatePaymongoRedirect("grab_pay");
+    } else if (paymentMethod === "card") {
+      setShowPaymentModal(true);
     }
   };
 

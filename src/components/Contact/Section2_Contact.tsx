@@ -20,7 +20,7 @@ const Section2_Contact = () => {
             </a>
           </h3>
           <p className="text-sm text-center text-gray-700 dark:text-[#efe8d2]">
-            Visit Our Roastery, we are open for tours and tastings
+            Visit Us, we are open for tours and tastings
           </p>
         </div>
         <div className="bg-[#dbc996] dark:bg-[#59382a] h-[250px] sm:h-[300px] md:h-[230px] lg:h-[250px] xl:h-[270px] border border-[#986836] dark:border-[#7a4e2e] rounded-2xl hover-lift  transition-transform duration-300 flex flex-col items-center justify-center p-6">

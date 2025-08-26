@@ -162,7 +162,7 @@ const Section3_Contact = () => {
         <div className="flex-1 space-y-6">
           <div className="bg-[#e9e0bf] dark:bg-[#59382a] rounded-lg shadow-lg p-6 md:p-8">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-[#f8f5ee] mb-4">
-              Visit Our Roastery
+              Visit Us
             </h2>
             <p className="text-gray-600 dark:text-[#efe8d2] mb-6 leading-relaxed">
               Come visit our roastery for a behind-the-scenes look at how we
