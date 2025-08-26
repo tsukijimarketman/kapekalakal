@@ -346,9 +346,10 @@ const ToPay: React.FC = () => {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL}/payment/create-cod`,
           {
-            selectedItems: selectedItems.map((item) => ({
+            selectedItems: selectedItems.map((item: any) => ({
               ...item,
-              productId: item.productId?._id || item.productId, // Ensure we're sending just the ID
+              // Handle both cases where productId might be an object with _id or just a string
+              productId: typeof item.productId === 'object' ? item.productId?._id : item.productId,
             })),
             deliveryAddress: {
               ...deliveryAddress,
