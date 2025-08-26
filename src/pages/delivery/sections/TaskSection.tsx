@@ -5,6 +5,21 @@ import type { Task } from "../types/rider";
 import deliveryApi from "../../../services/deliveryApi";
 import { toast } from "react-toastify";
 
+interface TaskData {
+  _id: string;
+  transactionId?: string;
+  items: Array<{ quantity: number; name: string }>;
+  totalAmount: number;
+  deliveryFee?: number;
+  shippingAddress?: string;
+  customerName?: string;
+  userId?: { name: string };
+  deliveryInfo?: {
+    latitude?: number;
+    longitude?: number;
+  };
+}
+
 interface TasksSectionProps {
   onAcceptTask: (taskId: string) => void;
 }
@@ -41,12 +56,15 @@ const TasksSection: React.FC<TasksSectionProps> = ({ onAcceptTask }) => {
       new Promise<{ lat: number; lng: number } | null>((resolve) => {
         if (!("geolocation" in navigator)) return resolve(null);
         navigator.geolocation.getCurrentPosition(
-          (pos) =>
+          (pos: GeolocationPosition) =>
             resolve({
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
             }),
-          () => resolve(null),
+          (error: GeolocationPositionError) => {
+            console.error("Geolocation error:", error);
+            resolve(null);
+          },
           { enableHighAccuracy: true, timeout: 7000 }
         );
       });
@@ -58,7 +76,8 @@ const TasksSection: React.FC<TasksSectionProps> = ({ onAcceptTask }) => {
         const { data } = await deliveryApi.getAvailableTasks();
         if (!data?.ok) throw new Error("Failed to load tasks");
 
-        const mapped: Task[] = (data.data || []).map((t: any) => {
+        const taskData = data.data as TaskData[];
+        const mapped: Task[] = (taskData || []).map((t) => {
           const dropLat = t?.deliveryInfo?.latitude;
           const dropLng = t?.deliveryInfo?.longitude;
           let distanceStr = "—";
@@ -73,9 +92,9 @@ const TasksSection: React.FC<TasksSectionProps> = ({ onAcceptTask }) => {
             distanceStr = `${km.toFixed(1)} km`;
           }
 
-          const itemsSummary = Array.isArray(t.items)
-            ? t.items.map((it: any) => `${it.quantity}x ${it.name}`).join(", ")
-            : "—";
+          const itemsSummary = t.items
+            .map((it) => `${it.quantity}x ${it.name}`)
+            .join(", ") || "—";
 
           const task: Task = {
             dbId: t._id,
@@ -85,15 +104,17 @@ const TasksSection: React.FC<TasksSectionProps> = ({ onAcceptTask }) => {
             distance: distanceStr,
             fee: t.deliveryFee ?? 50,
             address: t.shippingAddress ?? "—",
+            customer: t.customerName ?? t.userId?.name ?? "Customer",
             status: "pending",
           };
           return task;
         });
 
         if (mounted) setTasks(mapped);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed loading available tasks", err);
-        toast.error(err?.message || "Failed to load available tasks");
+        const errorMessage = err instanceof Error ? err.message : "Failed to load available tasks";
+        toast.error(errorMessage);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -112,8 +133,11 @@ const TasksSection: React.FC<TasksSectionProps> = ({ onAcceptTask }) => {
       toast.success("Task accepted!");
       setTasks((prev) => prev.filter((t) => t.dbId !== task.dbId));
       onAcceptTask(task.id);
-    } catch (err: any) {
-      if (err?.response?.status === 409) {
+    } catch (err: unknown) {
+      console.error("Failed accepting task", err);
+      if (err && typeof err === 'object' && 'response' in err && 
+          err.response && typeof err.response === 'object' && 
+          'status' in err.response && err.response.status === 409) {
         toast.warn(
           "Task already accepted by another rider or you already have an active task."
         );

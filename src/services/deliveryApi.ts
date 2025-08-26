@@ -1,10 +1,31 @@
 // frontend/src/services/deliveryApi.ts
 import api from "../config/api";
 
+interface ApiResponse<T> {
+  ok: boolean;
+  data: T;
+  message?: string;
+}
+
+interface TaskData {
+  _id: string;
+  transactionId?: string;
+  items: Array<{ quantity: number; name: string }>;
+  totalAmount: number;
+  deliveryFee?: number;
+  shippingAddress?: string;
+  customerName?: string;
+  userId?: { name: string };
+  deliveryInfo?: {
+    latitude?: number;
+    longitude?: number;
+  };
+}
+
 const deliveryApi = {
   // Get available tasks (matches GET /delivery/available)
   getAvailableTasks: () =>
-    api.get("/delivery/available", { withCredentials: true }),
+    api.get<ApiResponse<TaskData[]>>("/delivery/available", { withCredentials: true }),
 
   // Get rider's tasks (matches GET /delivery/my)
   getMyTasks: () => api.get("/delivery/my", { withCredentials: true }),
