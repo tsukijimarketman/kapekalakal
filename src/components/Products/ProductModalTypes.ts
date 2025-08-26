@@ -1,4 +1,4 @@
-import type { export ProductType } from "./ProductTypes";
+import type { ProductType } from "./ProductTypes";
 
 export interface ProductModalProps {
   product: ProductType;
