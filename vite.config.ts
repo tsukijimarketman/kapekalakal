@@ -14,7 +14,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          vendor: ['axios', 'jwt-decode'],
+          vendor: ['axios'],
         },
       },
     },
